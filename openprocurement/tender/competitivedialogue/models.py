@@ -171,6 +171,19 @@ class Tender(TenderEU):
         acl = [
             (Allow, '{}_{}'.format(self.owner, self.dialogue_token), 'generate_credentials')
         ]
+        acl.extend([(Allow, '{}_{}'.format(i.owner, i.owner_token), 'create_qualification_complaint')
+                    for i in self.bids
+                    if i.status in ['active', 'unsuccessful']
+                    ])
+        acl.extend([(Allow, '{}_{}'.format(i.owner, i.owner_token), 'create_award_complaint')
+                    for i in self.bids
+                    if i.status == 'active'
+                    ])
+        acl.extend([
+            (Allow, '{}_{}'.format(self.owner, self.owner_token), 'edit_tender'),
+            (Allow, '{}_{}'.format(self.owner, self.owner_token), 'upload_tender_documents'),
+            (Allow, '{}_{}'.format(self.owner, self.owner_token), 'edit_complaint'),
+        ])
         return acl
 
 
