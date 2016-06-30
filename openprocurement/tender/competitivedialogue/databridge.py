@@ -13,6 +13,7 @@ import logging
 import logging.config
 import os
 import argparse
+import copy
 
 from datetime import timedelta, datetime
 from retrying import retry
@@ -79,6 +80,16 @@ def get_bid_by_id(bids, bid_id):
     for bid in bids:
         if bid['id'] == bid_id:
             return bid
+
+
+def generate_new_id_for_items(orig_tender):
+    """
+    Generate new item id for every item in tender
+    :param orig_tender: competitive dialogue tender
+    :return: None
+    """
+    for item in orig_tender['items']:
+        item['id'] = generate_id()
 
 
 def prepare_lot(orig_tender, lot_id, items):
@@ -235,22 +246,30 @@ class CompetitiveDialogueDataBridge(object):
                 old_lots, items, short_listed_firms = dict(), list(), dict()
                 for qualification in tender['qualifications']:
                     if qualification['status'] == 'active':  # check if qualification has status active
-                        if qualification['lotID'] not in old_lots:  # check if lot id in local dict with new lots
-                            lot = prepare_lot(tender, qualification['lotID'], items)  # update lot with new id
-                            old_lots[qualification['lotID']] = lot  # set new lot in local dict
-                        bid = get_bid_by_id(tender['bids'], qualification['bidID'])
-                        for bid_tender in bid['tenderers']:
-                            if bid_tender['identifier']['id'] not in short_listed_firms:
-                                short_listed_firms[bid_tender['identifier']['id']] = {"name": bid_tender['name'],
-                                                                                      "identifier": bid_tender[
-                                                                                          'identifier'],
-                                                                                      "lots": [{"id": old_lots[
-                                                                                          qualification['lotID']][
-                                                                                          'id']}]}
-                            else:
-                                short_listed_firms[bid_tender['identifier']['id']]['lots'].append(
-                                    {"id": old_lots[qualification['lotID']]['id']})
-                new_tender['items'] = items
+                        if qualification.get('lotID'):
+                            if qualification['lotID'] not in old_lots:  # check if lot id in local dict with new lots
+                                lot = prepare_lot(tender, qualification['lotID'], items)  # update lot with new id
+                                old_lots[qualification['lotID']] = lot  # set new lot in local dict
+                            bid = get_bid_by_id(tender['bids'], qualification['bidID'])
+                            for bid_tender in bid['tenderers']:
+                                if bid_tender['identifier']['id'] not in short_listed_firms:
+                                    short_listed_firms[bid_tender['identifier']['id']] = {"name": bid_tender['name'],
+                                                                                          "identifier": bid_tender['identifier'],
+                                                                                          "lots": [{"id": old_lots[qualification['lotID']]['id']}]}
+                                else:
+                                    short_listed_firms[bid_tender['identifier']['id']]['lots'].append(
+                                        {"id": old_lots[qualification['lotID']]['id']})
+                        else:
+                            generate_new_id_for_items(tender)
+                            new_tender['items'] = copy.deepcopy(tender['items'])  # add all items, with new id
+                            bid = get_bid_by_id(tender['bids'], qualification['bidID'])
+                            for bid_tender in bid['tenderers']:
+                                if bid_tender['identifier']['id'] not in short_listed_firms:
+                                    short_listed_firms[bid_tender['identifier']['id']] = {"name": bid_tender['name'],
+                                                                                          "identifier": bid_tender['identifier'],
+                                                                                          "lots": []}
+                if items:  # If we have lots, then add only related items
+                    new_tender['items'] = items
                 new_tender['lots'] = old_lots.values()
                 new_tender['shortlistedFirms'] = short_listed_firms.values()
 
@@ -352,7 +371,7 @@ class CompetitiveDialogueDataBridge(object):
                 del tender['tender_token']  # do not reveal tender credentials in logs
                 logger.warn("Can't create new tender from tender {0}".format(tender['dialogueID']),
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_CREATE_ERROR,
-                                                   "TENDER_ID": new_tender['dialogueID']}))
+                                                   "TENDER_ID": tender['dialogueID']}))
             else:
                 self.new_tender_retry_put_queue.get()
             gevent.sleep(0)
