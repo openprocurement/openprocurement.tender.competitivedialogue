@@ -839,15 +839,9 @@ class CompetitiveDialogStage2EUResourceTest(BaseCompetitiveDialogEUStage2WebTest
         self.assertNotIn('relatedItem', response.json['data']['features'][0])
 
         response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender['id'], token),
-                                       {'data': {'tenderPeriod': {'startDate': None}}}, status=422)
-        self.assertEqual(response.status, '422 Unprocessable Entity')
-        self.assertEqual(response.content_type, 'application/json')
-        self.assertEqual(response.json['status'], 'error')
-        self.assertEqual(response.json['errors'], [
-            {u'description': ['tenderPeriod should be greater than 30 days'], u'location': u'body', u'name': u'tenderPeriod'}
-        ])
-        #self.assertEqual(response.status, '200 OK')
-        #self.assertIn('features', response.json['data'])
+                                       {'data': {'tenderPeriod': {'startDate': None}}})
+        self.assertEqual(response.status, '200 OK')
+        self.assertIn('features', response.json['data'])
 
         response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender['id'], token),
                                        {'data': {'features': []}})
@@ -876,7 +870,7 @@ class CompetitiveDialogStage2EUResourceTest(BaseCompetitiveDialogEUStage2WebTest
         self.assertEqual(response.status, '403 Forbidden')
 
         response = self.app.patch_json(
-            '/tenders/{}/credentials?acc_token={}'.format(tender['id'], owner_token),
+            '/tenders/{}/credentials?acc_token={}'.format(tender['id'], test_access_token_stage1),
             {'data': ''})
         self.assertEqual(response.status, '200 OK')
 
