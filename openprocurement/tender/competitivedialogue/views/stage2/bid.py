@@ -19,6 +19,7 @@ from openprocurement.api.validation import (
             description="Competitive Dialogue  Stage2EU bids")
 class CompetitiveDialogueStage2EUBidResource(BaseResourceEU):
     """ Tender Stage2 EU  bids """
+    allowed_bid_status_on_create = ['draft', 'pending']
 
     @json_view(content_type="application/json", permission='create_bid', validators=(validate_bid_data,))
     def collection_post(self):
@@ -32,6 +33,7 @@ class CompetitiveDialogueStage2EUBidResource(BaseResourceEU):
             description="Competitive Dialogue Stage2 UA bids")
 class CompetitiveDialogueStage2UABidResource(BaseResourceUA):
     """ Tender Stage2 UA Stage2 bids """
+    allowed_bid_status_on_create = ['draft', 'active']
 
     @json_view(content_type="application/json", permission='create_bid', validators=(validate_bid_data,))
     def collection_post(self):
