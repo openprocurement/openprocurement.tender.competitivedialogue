@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 import unittest
+from copy import deepcopy
 
-from openprocurement.tender.openeu.tests.base import (
-    BaseTenderContentWebTest,
-    test_features_tender_data,
-    test_bids
+from openprocurement.tender.competitivedialogue.tests.base import(
+    BaseCompetitiveDialogEUStage2ContentWebTest,
+    test_bids,
+    test_shortlistedFirms,
+    test_features_tender_eu_data,
+    test_tender_stage2_data_eu
 )
-from openprocurement.tender.competitivedialogue.tests.base import BaseCompetitiveDialogEUStage2ContentWebTest
+
+author = test_bids[0]["tenderers"][0]
+author['identifier']['id'] = test_shortlistedFirms[0]['identifier']['id']
+author['identifier']['scheme'] = test_shortlistedFirms[0]['identifier']['scheme']
 
 
 class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest):
@@ -88,7 +94,9 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
                 u'name': u'tenderers'}
         ])
 
-        response = self.app.post_json(request_path, {'data': {'tenderers': [{'identifier': {}}]}}, status=422)
+        response = self.app.post_json(request_path,
+                                      {'data': {'tenderers': [{'identifier': {}}]}},
+                                      status=422)
         self.assertEqual(response.status, '422 Unprocessable Entity')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['status'], 'error')
@@ -97,8 +105,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
             {u'description': [u'This field is required.'], u'location': u'body', u'name': u'selfQualified'},
             {u'description': [
                 {u'contactPoint': [u'This field is required.'],
-                 u'identifier': {u'scheme': [u'This field is required.'],
-                                 u'id': [u'This field is required.']},
+                 u'identifier': {u'scheme': [u'This field is required.'], u'id': [u'This field is required.']},
                  u'name': [u'This field is required.'],
                  u'address': [u'This field is required.']}
             ], u'location': u'body', u'name': u'tenderers'}
@@ -135,10 +142,10 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
             {u'description': [u'This field is required.'], u'location': u'body', u'name': u'value'}
         ])
 
-        response = self.app.post_json(request_path, {'data': {'selfEligible': True, 'selfQualified': True,
-                                                              'tenderers': test_bids[0]['tenderers'],
-                                                              "value": {"amount": 500,
-                                                                        'valueAddedTaxIncluded': False}}},
+        response = self.app.post_json(request_path,
+                                      {'data': {'selfEligible': True, 'selfQualified': True,
+                                                'tenderers': test_bids[0]['tenderers'],
+                                                "value": {"amount": 500, 'valueAddedTaxIncluded': False}}},
                                       status=422)
         self.assertEqual(response.status, '422 Unprocessable Entity')
         self.assertEqual(response.content_type, 'application/json')
@@ -156,14 +163,13 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         self.assertEqual(response.json['status'], 'error')
 
         self.assertEqual(response.json['errors'], [
-            {u'description': [u'currency of bid should be identical to currency of value of tender'],
-             u'location': u'body', u'name': u'value'},
+            {u'description': [u'currency of bid should be identical to currency of value of tender'], u'location': u'body', u'name': u'value'},
         ])
 
     def test_create_tender_bidder(self):
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+                                                'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
@@ -174,7 +180,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         for status in ('active', 'unsuccessful', 'deleted', 'invalid'):
             response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                           {'data': {'selfEligible': True, 'selfQualified': True,
-                                                    'tenderers': test_bids[0]['tenderers'],
+                                                    'tenderers': [author],
                                                     'value': {"amount": 500},
                                                     'status': status}}, status=403)
             self.assertEqual(response.status, '403 Forbidden')
@@ -183,7 +189,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
 
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}},
+                                       'tenderers': [author], "value": {"amount": 500}}},
                                       status=403)
         self.assertEqual(response.status, '403 Forbidden')
         self.assertEqual(response.content_type, 'application/json')
@@ -192,7 +198,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
     def test_patch_tender_bidder(self):
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+                                                'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
@@ -256,7 +262,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
             response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id,
                                                                                      bid['id'],
                                                                                      bid_token),
-                                        {'data': {'status': status}}, status=403)
+                                           {'data': {'status': status}}, status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.json['errors'][0]["description"],
                              "Can't update bid to ({}) status".format(status))
@@ -268,9 +274,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['data']["value"]["amount"], 400)
 
-        response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id,
-                                                                                 bid['id'],
-                                                                                 bid_token),
+        response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], bid_token),
                                        {"data": {"value": {"amount": 400}}},
                                        status=403)
         self.assertEqual(response.status, '403 Forbidden')
@@ -279,16 +283,17 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
                          "Can't update bid in current (complete) tender status")
 
     def test_get_tender_bidder(self):
-        response = self.app.post_json('/tenders/{}/bids'.format(
-            self.tender_id), {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+        self.maxDiff = None
+        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
+                                      {'data': {'selfEligible': True, 'selfQualified': True,
+                                                'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
         bid_token = response.json['access']['token']
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 499}}})
+                                                'tenderers': [author], "value": {"amount": 499}}})
 
         response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, bid['id']), status=403)
         self.assertEqual(response.status, '403 Forbidden')
@@ -433,7 +438,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
     def test_delete_tender_bidder(self):
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+                                                'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
@@ -485,37 +490,23 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         # create new bid
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+                                                'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         bid = response.json['data']
         bid_token = response.json['access']['token']
 
-        # update tender. we can set value that is less than a value in bid as
-        # they will be invalidated by this request
-        response = self.app.patch_json('/tenders/{}?acc_token={}'.format(self.tender_id, self.tender_token), {"data":
-                {"value": {'amount': 300.0}}
-        })
-        self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']["value"]["amount"], 300)
-
-        # check bid 'invalid' status
-        response = self.app.get('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], bid_token))
-        self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']['status'], 'invalid')
-
-        # try to delete 'invalid' bid
         response = self.app.delete('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], bid_token))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['data']['id'], bid['id'])
         self.assertEqual(response.json['data']['status'], 'deleted')
 
-        response = self.app.post_json('/tenders/{}/bids'.format(
-            self.tender_id), {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 100}}})
-        response = self.app.post_json('/tenders/{}/bids'.format(
-            self.tender_id), {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[1]['tenderers'], "value": {"amount": 101}}})
+        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
+                                      {'data': {'selfEligible': True, 'selfQualified': True,
+                                                'tenderers': [author], "value": {"amount": 100}}})
+        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
+                                      {'data': {'selfEligible': True, 'selfQualified': True,
+                                                'tenderers': [author], "value": {"amount": 101}}})
 
         # switch to active.pre-qualification
         self.set_status('active.pre-qualification', {"id": self.tender_id, 'status': 'active.tendering'})
@@ -560,8 +551,8 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         award_id = [i['id'] for i in response.json['data'] if i['status'] == 'pending'][0]
 
         self.app.authorization = ('Basic', ('token', ''))
-        self.app.patch_json('/tenders/{}/awards/{}?acc_token={}'.format(self.tender_id, award_id, self.tender_token),
-                            {'data': {'status': 'active', 'qualified': True, 'eligible': True}})
+        self.app.patch_json('/tenders/{}/awards/{}?acc_token={}'.format(
+            self.tender_id, award_id, self.tender_token), {"data": {"status": "active", "qualified": True, "eligible": True}})
         self.assertEqual(response.status, "200 OK")
         response = self.app.get('/tenders/{}'.format(self.tender_id))
         self.assertEqual(response.json['data']['status'], "active.awarded")
@@ -596,7 +587,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
     def test_deleted_bid_is_not_restorable(self):
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+                                       'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
@@ -625,7 +616,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         for bid_amount in (400, 405):
             response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                           {'data': {'selfEligible': True, 'selfQualified': True,
-                                           'tenderers': test_bids[0]['tenderers'], "value": {"amount": bid_amount}}})
+                                                    'tenderers': [author], "value": {"amount": bid_amount}}})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
             bids.append(response.json['data'])
@@ -640,13 +631,12 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
 
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[1]['tenderers'], "value": {"amount": 101}}})
+                                                'tenderers': [author], "value": {"amount": 101}}})
 
         # switch to active.pre-qualification
         self.set_status('active.pre-qualification', {"id": self.tender_id, 'status': 'active.tendering'})
         self.app.authorization = ('Basic', ('chronograph', ''))
-        response = self.app.patch_json('/tenders/{}'.format(
-            self.tender_id), {"data": {"id": self.tender_id}})
+        response = self.app.patch_json('/tenders/{}'.format(self.tender_id), {"data": {"id": self.tender_id}})
         self.assertEqual(response.json['data']['status'], 'active.pre-qualification')
 
         # qualify bids
@@ -691,7 +681,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
     def test_get_tender_tenderers(self):
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
+                                                'tenderers': [author], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
@@ -704,7 +694,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
 
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[1]['tenderers'], "value": {"amount": 101}}})
+                                                'tenderers': [author], "value": {"amount": 101}}})
 
         # switch to active.pre-qualification
         self.set_status('active.pre-qualification', {"id": self.tender_id, 'status': 'active.tendering'})
@@ -763,28 +753,30 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         ])
 
     def test_bid_Administrator_change(self):
-        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
-                                      {'data': {'selfEligible': True, 'selfQualified': True,
+        response = self.app.post_json('/tenders/{}/bids'.format(
+            self.tender_id), {'data': {'selfEligible': True, 'selfQualified': True,
                                        'tenderers': test_bids[0]['tenderers'], "value": {"amount": 500}}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
 
         self.app.authorization = ('Basic', ('administrator', ''))
-        response = self.app.patch_json('/tenders/{}/bids/{}'.format(self.tender_id, bid['id']),
-                                       {"data": {'selfEligible': True, 'selfQualified': True,
-                                                 'tenderers': [{'identifier': {'id': '00000000'}}],
-                                                 'value': {'amount': 400}}})
+        response = self.app.patch_json('/tenders/{}/bids/{}'.format(self.tender_id, bid['id']), {"data": {
+            'selfEligible': True, 'selfQualified': True,
+            'tenderers': [{"identifier": {"id": "00000000"}}],
+            "value": {"amount": 400}
+        }})
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertNotEqual(response.json['data']["value"]["amount"], 400)
-        self.assertEqual(response.json['data']['tenderers'][0]['identifier']['id'], '00000000')
+        self.assertEqual(response.json['data']["tenderers"][0]["identifier"]["id"], "00000000")
 
     def test_bids_invalidation_on_tender_change(self):
         bids_access = {}
 
         # submit bids
         for data in test_bids:
+            data['tenderers'] = [author]
             response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': data})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
@@ -796,12 +788,11 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.json['data']['status'], 'pending')
 
-        # update tender. we can set value that is less than a value in bids as
-        # they will be invalidated by this request
+        # We can't update tender
         response = self.app.patch_json('/tenders/{}?acc_token={}'.format(self.tender_id, self.tender_token),
-                                       {"data":{"value": {'amount': 300.0}}})
+                                       {"data": {"value": {'amount': 300.0}}})
         self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']["value"]["amount"], 300)
+        self.assertEqual(response.json['data']["value"]["amount"], 500)
 
         # check bids status
         for bid_id, token in bids_access.items():
@@ -816,11 +807,14 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
                                      status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
-            self.assertEqual(response.json['errors'][0]["description"], "Can't add document to 'invalid' bid")
+            self.assertEqual(response.json['errors'][0]['description'], "Can't add document to 'invalid' bid")
 
         # check that tender status change does not invalidate bids
         # submit one more bid. check for invalid value first
-        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bids[0]}, status=422)
+        test_bid = deepcopy(test_bids[0])
+        test_bid['tenderers'] = [author]
+        test_bid['value']['amount'] = 900
+        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bid}, status=422)
         self.assertEqual(response.status, '422 Unprocessable Entity')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['status'], 'error')
@@ -840,7 +834,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
 
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
-                                       'tenderers': test_bids[1]['tenderers'], 'value': {'amount': 101}}})
+                                                'tenderers': [author], "value": {"amount": 101}}})
 
         # switch to active.pre-qualification
         self.set_status('active.pre-qualification', {"id": self.tender_id, 'status': 'active.tendering'})
@@ -859,8 +853,8 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         self.assertEqual(response.json['data']['status'], 'active')
 
         # switch to active.pre-qualification.stand-still
-        response = self.app.patch_json('/tenders/{}'.format(
-            self.tender_id), {"data": {"status": 'active.pre-qualification.stand-still'}})
+        response = self.app.patch_json('/tenders/{}'.format(self.tender_id),
+                                       {"data": {"status": 'active.pre-qualification.stand-still'}})
         self.assertEqual(response.json['data']['status'], 'active.pre-qualification.stand-still')
 
         # switch to active.auction
@@ -931,6 +925,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
 
         # submit bids
         for data in test_bids:
+            data['tenderers'] = [author]
             response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': data})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
@@ -942,8 +937,8 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.json['data']['status'], 'pending')
 
-        response = self.app.post('/tenders/{}/documents?acc_token={}'.format(
-            self.tender_id, self.tender_token), upload_files=[('file', u'укр.doc', 'content')])
+        response = self.app.post('/tenders/{}/documents?acc_token={}'.format(self.tender_id, self.tender_token),
+                                 upload_files=[('file', u'укр.doc', 'content')])
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
 
@@ -961,22 +956,67 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
 
 
 class TenderStage2EUBidFeaturesResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest):
-    initial_data = test_features_tender_data
     initial_status = 'active.tendering'
     initial_auth = ('Basic', ('broker', ''))
 
+    def setUp(self):
+        self.app.authorization = ('Basic', ('broker', ''))
+
     def test_features_bidder(self):
+        data = test_tender_stage2_data_eu.copy()
+        item = data['items'][0].copy()
+        item['id'] = "1"
+        data['items'] = [item]
+        data['features'] = [
+            {
+                "code": "OCDS-123454-AIR-INTAKE",
+                "featureOf": "item",
+                "relatedItem": "1",
+                "title": u"Потужність всмоктування",
+                "title_en": u"Air Intake",
+                "description": u"Ефективна потужність всмоктування пилососа, в ватах (аероватах)",
+                "enum": [
+                    {
+                        "value": 0.05,
+                        "title": u"До 1000 Вт"
+                    },
+                    {
+                        "value": 0.1,
+                        "title": u"Більше 1000 Вт"
+                    }
+                ]
+            },
+            {
+                "code": "OCDS-123454-POSTPONEMENT",
+                "featureOf": "tenderer",
+                "title": u"Відстрочка платежу",
+                "title_en": u"Postponement of payment",
+                "description": u"Термін відстрочки платежу",
+                "enum": [
+                    {
+                        "value": 0.05,
+                        "title": u"До 90 днів"
+                    },
+                    {
+                        "value": 0.1,
+                        "title": u"Більше 90 днів"
+                    }
+                ]
+            }
+        ]
+        self.create_tender(initial_data=data)
+
         test_features_bids = [
             {
                 # "status": "pending",
                 "parameters": [
                     {
                         "code": i["code"],
-                        "value": 0.1,
+                        "value": 0.05,
                     }
-                    for i in self.initial_data['features']
+                    for i in data['features']
                 ],
-                "tenderers": test_bids[0]["tenderers"],
+                "tenderers": [author],
                 "value": {
                     "amount": 469,
                     "currency": "UAH",
@@ -990,11 +1030,11 @@ class TenderStage2EUBidFeaturesResourceTest(BaseCompetitiveDialogEUStage2Content
                 "parameters": [
                     {
                         "code": i["code"],
-                        "value": 0.15,
+                        "value": 0.05,
                     }
-                    for i in self.initial_data['features']
+                    for i in data['features']
                 ],
-                "tenderers": test_bids[1]["tenderers"],
+                "tenderers": [author],
                 "value": {
                     "amount": 479,
                     "currency": "UAH",
@@ -1015,8 +1055,50 @@ class TenderStage2EUBidFeaturesResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual(bid, i)
 
     def test_features_bidder_invalid(self):
+        tender_data = test_tender_stage2_data_eu.copy()
+        item = tender_data['items'][0].copy()
+        item['id'] = "1"
+        tender_data['items'] = [item]
+        tender_data['features'] = [
+            {
+                "code": "OCDS-123454-AIR-INTAKE",
+                "featureOf": "item",
+                "relatedItem": "1",
+                "title": u"Потужність всмоктування",
+                "title_en": u"Air Intake",
+                "description": u"Ефективна потужність всмоктування пилососа, в ватах (аероватах)",
+                "enum": [
+                    {
+                        "value": 0.05,
+                        "title": u"До 1000 Вт"
+                    },
+                    {
+                        "value": 0.1,
+                        "title": u"Більше 1000 Вт"
+                    }
+                ]
+            },
+            {
+                "code": "OCDS-123454-POSTPONEMENT",
+                "featureOf": "tenderer",
+                "title": u"Відстрочка платежу",
+                "title_en": u"Postponement of payment",
+                "description": u"Термін відстрочки платежу",
+                "enum": [
+                    {
+                        "value": 0.05,
+                        "title": u"До 90 днів"
+                    },
+                    {
+                        "value": 0.1,
+                        "title": u"Більше 90 днів"
+                    }
+                ]
+            }
+        ]
+        self.create_tender(initial_data=tender_data)
         data = {
-            "tenderers": test_bids[0]["tenderers"],
+            "tenderers": [author],
             "value": {
                 "amount": 469,
                 "currency": "UAH",
@@ -1034,8 +1116,8 @@ class TenderStage2EUBidFeaturesResourceTest(BaseCompetitiveDialogEUStage2Content
         ])
         data["parameters"] = [
             {
-                "code": "OCDS-123454-AIR-INTAKE",
-                "value": 0.1,
+                "code": tender_data['features'][0]['code'],
+                "value": 0.05,
             }
         ]
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': data}, status=422)
@@ -1046,7 +1128,7 @@ class TenderStage2EUBidFeaturesResourceTest(BaseCompetitiveDialogEUStage2Content
             {u'description': [u'All features parameters is required.'], u'location': u'body', u'name': u'parameters'}
         ])
         data["parameters"].append({
-            "code": "OCDS-123454-AIR-INTAKE",
+            "code": tender_data['features'][0]['code'],
             "value": 0.1,
         })
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': data}, status=422)
@@ -1054,20 +1136,16 @@ class TenderStage2EUBidFeaturesResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['status'], 'error')
         self.assertEqual(response.json['errors'], [
-            {u'description': [u'Parameter code should be uniq for all parameters'],
-             u'location': u'body',
-             u'name': u'parameters'}
+            {u'description': [u'Parameter code should be uniq for all parameters'], u'location': u'body', u'name': u'parameters'}
         ])
-        data["parameters"][1]["code"] = "OCDS-123454-YEARS"
+        data["parameters"][1]["code"] = tender_data['features'][0]['code']
         data["parameters"][1]["value"] = 0.2
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': data}, status=422)
         self.assertEqual(response.status, '422 Unprocessable Entity')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['status'], 'error')
         self.assertEqual(response.json['errors'], [
-            {u'description': [{u'value': [u'value should be one of feature value.']}],
-             u'location': u'body',
-             u'name': u'parameters'}
+            {u'description': [{u'value': [u'value should be one of feature value.']}], u'location': u'body', u'name': u'parameters'}
         ])
 
 
@@ -1078,12 +1156,16 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
     def setUp(self):
         super(TenderStage2EUBidDocumentResourceTest, self).setUp()
         # Create bid
-        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bids[0]})
+        test_bid_1 = deepcopy(test_bids[0])
+        test_bid_1['tenderers'] = [author]
+        test_bid_2 = deepcopy(test_bids[1])
+        test_bid_2['tenderers'] = [author]
+        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bid_1})
         bid = response.json['data']
         self.bid_id = bid['id']
         self.bid_token = response.json['access']['token']
         # create second bid
-        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bids[1]})
+        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bid_2})
         bid2 = response.json['data']
         self.bid2_id = bid2['id']
         self.bid2_token = response.json['access']['token']
@@ -1092,9 +1174,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         auth = self.app.authorization
         for doc_resource in ['financial_documents', 'eligibility_documents', 'qualification_documents']:
             self.app.authorization = auth
-            response = self.app.post('/tenders/some_id/bids/some_id/{}?acc_token={}'.format(doc_resource,
-                                                                                            self.bid_token),
-                                     status=404, upload_files=[('file', 'name.doc', 'content')])
+            response = self.app.post('/tenders/some_id/bids/some_id/{}?acc_token={}'.format(doc_resource, self.bid_token),
+                                     status=404,
+                                     upload_files=[('file', 'name.doc', 'content')])
             self.assertEqual(response.status, '404 Not Found')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['status'], 'error')
@@ -1297,46 +1379,55 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
                 self.assertEqual(doc, doc2)
             self.app.authorization = orig_auth
 
-        def documents_are_accessible_for_t_and_b_owners(resource):
+        def documents_are_accessible_for_tender_owner(resource):
             orig_auth = self.app.authorization
             self.app.authorization = ('Basic', ('broker', ''))
-            for token in (self.bid_token, self.tender_token):
-                response = self.app.get('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                     resource, token))
-                self.assertEqual(response.status, '200 OK')
-                self.assertEqual(len(response.json['data']), 2)
-                doc_id = doc_id_by_type[resource]['id']
-                response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                        resource, doc_id, token))
-                self.assertEqual(response.status, '200 OK')
-                doc_id = doc_id_by_type[resource+'private']['id']
-                response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                        resource, doc_id, token))
-                self.assertEqual(response.status, '200 OK')
+            token = self.tender_token
+            response = self.app.get('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
+                                                                                 resource, token))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(len(response.json['data']), 2)
+            doc_id = doc_id_by_type[resource]['id']
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
+                                                                                    resource, doc_id, token))
+            self.assertIn('url', response.json['data'])
+            self.assertEqual(response.status, '200 OK')
+            doc_id = doc_id_by_type[resource+'private']['id']
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
+                                                                                    resource, doc_id, token))
+            self.assertEqual(response.status, '200 OK')
+            self.assertIn('url', response.json['data'])
+            self.app.authorization = orig_auth
+
+        def public_documents_are_accessible_for_others(resource):
+            orig_auth = self.app.authorization
+            self.app.authorization = ('Basic', ('broker05', ''))
+
+            response = self.app.get('/tenders/{}/bids/{}/{}'.format(self.tender_id, self.bid_id, resource))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(len(response.json['data']), 2)
+            self.assertIn(doc_id_by_type[resource]['key'], response.json['data'][0]['url'])
+            self.assertNotIn('url', response.json['data'][1])
+
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id, resource,
+                                                                       doc_id_by_type[resource]['id']))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(response.json['data']['title'], 'name_{}.doc'.format(resource[:-1]))
+            self.assertEqual(response.json['data']['confidentiality'], u'public')
+            self.assertEqual(response.json['data']['format'], u'application/msword')
+            self.assertEqual(response.json['data']['language'], 'uk')
+
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id, resource,
+                                                                       doc_id_by_type[resource+'private']['id']))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(response.json['data']['confidentiality'], u'buyerOnly')
+            self.assertNotIn('url', response.json['data'])
+
             self.app.authorization = orig_auth
 
         def all_public_documents_are_accessible_for_others():
-            orig_auth = self.app.authorization
-            self.app.authorization = ('Basic', ('broker05', ''))
-            for doc_resource in ['documents', 'financial_documents',
-                                 'eligibility_documents', 'qualification_documents']:
-                response = self.app.get('/tenders/{}/bids/{}/{}'.format(self.tender_id, self.bid_id, doc_resource))
-                self.assertEqual(response.status, '200 OK')
-                self.assertEqual(len(response.json['data']), 2)
-                self.assertIn(doc_id_by_type[doc_resource]['key'], response.json['data'][0]['url'])
-                self.assertNotIn('url', response.json['data'][1])
-                response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id, doc_resource,
-                                                                           doc_id_by_type[doc_resource]['id']))
-                self.assertEqual(response.status, '200 OK')
-                self.assertEqual(response.json['data']['title'], 'name_{}.doc'.format(doc_resource[:-1]))
-                self.assertEqual(response.json['data']['confidentiality'], u'public')
-                self.assertEqual(response.json['data']['format'], u'application/msword')
-                self.assertEqual(response.json['data']['language'], 'uk')
-                response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id, doc_resource,
-                                                                           doc_id_by_type[doc_resource+'private']['id']))
-                self.assertEqual(response.status, '200 OK')
-                self.assertNotIn('url', response.json['data'])
-            self.app.authorization = orig_auth
+            for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
+                public_documents_are_accessible_for_others(doc_resource)
 
         # active.tendering
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
@@ -1362,11 +1453,11 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual('name_{}_private.doc'.format(doc_resource[:-1]), response.json["data"]["title"])
             key = response.json["data"]["url"].split('?')[-1]
             doc_id_by_type[doc_resource+'private'] = {'id': doc_id, 'key': key}
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {'confidentiality': 'buyerOnly',
-                                                     'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token), { "data": {
+                    'confidentiality': 'buyerOnly',
+                    'confidentialityRationale': 'Only our company sells badgers with pink hair.',
+                }})
             self.assertEqual(response.status, '200 OK')
 
             document_is_unaccessible_for_others(doc_resource)
@@ -1384,33 +1475,56 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         response = self.app.get('/tenders/{}/bids'.format(self.tender_id))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(len(response.json['data']), 2)
-        self.assertEqual(set(response.json['data'][0].keys()), set(['id', 'status', 'documents', 'tenderers']))
+        self.assertEqual(set(response.json['data'][0].keys()),
+                         set(['id', 'status', 'documents', 'eligibilityDocuments', 'tenderers']))
         self.assertEqual(set(response.json['data'][1].keys()), set(['id', 'status', 'tenderers']))
         response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, self.bid_id))
         self.assertEqual(response.status, '200 OK')
-        self.assertEqual(set(response.json['data'].keys()), set(['id', 'status', 'documents', 'tenderers']))
-        response = self.app.get('/tenders/{}/bids/{}/documents'.format(self.tender_id, self.bid_id))
-        self.assertEqual(response.status, '200 OK')
-        self.assertEqual(len(response.json['data']), 2)
-        self.assertIn(doc_id_by_type['documents']['key'], response.json['data'][0]['url'])
-        doc_id = doc_id_by_type['documents']['id']
-        response = self.app.get('/tenders/{}/bids/{}/documents/{}'.format(self.tender_id, self.bid_id, doc_id))
-        self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']['title'], u'name_document.doc')
-        self.assertEqual(response.json['data']['confidentiality'], u'public')
-        self.assertEqual(response.json['data']['format'], u'application/msword')
-        self.assertEqual(response.json['data']['language'], 'uk')
-        for doc_resource in ['financial_documents', 'eligibility_documents', 'qualification_documents']:
+        self.assertEqual(set(response.json['data'].keys()),
+                         set(['id', 'status', 'documents', 'eligibilityDocuments', 'tenderers']))
+
+        for doc_resource in ['documents', 'eligibility_documents']:
+            response = self.app.get('/tenders/{}/bids/{}/{}'.format(self.tender_id, self.bid_id, doc_resource))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(len(response.json['data']), 2)
+            self.assertIn('url', response.json['data'][0])
+            self.assertIn(doc_id_by_type[doc_resource]['key'], response.json['data'][0]['url'])
+            self.assertNotIn('url', response.json['data'][1])
+
+        for doc_resource in ['documents', 'eligibility_documents']:
+            doc_id = doc_id_by_type[doc_resource]['id']
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id,
+                                                                       doc_resource, doc_id))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(response.json['data']['title'], u'name_{}.doc'.format(doc_resource[:-1]))
+            self.assertEqual(response.json['data']['confidentiality'], u'public')
+            self.assertEqual(response.json['data']['format'], u'application/msword')
+            self.assertEqual(response.json['data']['language'], 'uk')
+
+            doc_id = doc_id_by_type[doc_resource+'private']['id']
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id,
+                                                                       doc_resource, doc_id))
+            self.assertEqual(response.status, '200 OK')
+            self.assertEqual(response.json['data']['title'], u'name_{}_private.doc'.format(doc_resource[:-1]))
+            self.assertEqual(response.json['data']['confidentiality'], u'buyerOnly')
+            self.assertEqual(response.json['data']['format'], u'application/msword')
+            self.assertEqual(response.json['data']['language'], 'uk')
+
+        for doc_resource in ['financial_documents', 'qualification_documents']:
             document_is_unaccessible_for_others(doc_resource)
             document_is_unaccessible_for_tender_owner(doc_resource)
 
-        documents_are_accessible_for_t_and_b_owners("documents")
+        for doc_resource in ['documents', 'eligibility_documents']:
+            documents_are_accessible_for_tender_owner(doc_resource)
+            public_documents_are_accessible_for_others(doc_resource)
+        all_documents_are_accessible_for_bid_owner(doc_resource)
 
         # qualify bids
         response = self.app.get('/tenders/{}/qualifications'.format(self.tender_id))
         self.app.authorization = ('Basic', ('token', ''))
         for qualification in response.json['data']:
-            response = self.app.patch_json('/tenders/{}/qualifications/{}'.format(self.tender_id, qualification['id']),
+            response = self.app.patch_json('/tenders/{}/qualifications/{}'.format(self.tender_id,
+                                                                                  qualification['id']),
                                            {"data": {"status": "active", "qualified": True, "eligible": True}})
             self.assertEqual(response.status, "200 OK")
 
@@ -1423,11 +1537,13 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         response = self.app.get('/tenders/{}/bids'.format(self.tender_id))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(len(response.json['data']), 2)
-        self.assertEqual(set(response.json['data'][0].keys()), set(['id', 'status', 'documents', 'tenderers']))
+        self.assertEqual(set(response.json['data'][0].keys()),
+                         set(['id', 'status', 'documents', 'eligibilityDocuments', 'tenderers']))
         self.assertEqual(set(response.json['data'][1].keys()), set(['id', 'status', 'tenderers']))
         response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, self.bid_id))
         self.assertEqual(response.status, '200 OK')
-        self.assertEqual(set(response.json['data'].keys()), set(['id', 'status', 'documents', 'tenderers']))
+        self.assertEqual(set(response.json['data'].keys()),
+                         set(['id', 'status', 'documents', 'eligibilityDocuments', 'tenderers']))
         response = self.app.get('/tenders/{}/bids/{}/documents'.format(self.tender_id, self.bid_id))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(len(response.json['data']), 2)
@@ -1438,10 +1554,14 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.json['data']['title'], u'name_document.doc')
         self.assertEqual(response.json['data']['confidentiality'], u'public')
         self.assertEqual(response.json['data']['format'], u'application/msword')
-        for doc_resource in ['financial_documents', 'eligibility_documents', 'qualification_documents']:
+        for doc_resource in ['financial_documents', 'qualification_documents']:
             document_is_unaccessible_for_others(doc_resource)
             document_is_unaccessible_for_tender_owner(doc_resource)
-        documents_are_accessible_for_t_and_b_owners("documents")
+
+        for doc_resource in ['documents', 'eligibility_documents']:
+            documents_are_accessible_for_tender_owner(doc_resource)
+            public_documents_are_accessible_for_others(doc_resource)
+        all_documents_are_accessible_for_bid_owner(doc_resource)
 
         # switch to active.auction
         self.set_status('active.auction', {"id": self.tender_id, 'status': 'active.pre-qualification.stand-still'})
@@ -1453,11 +1573,13 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         response = self.app.get('/tenders/{}/bids'.format(self.tender_id))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(len(response.json['data']), 2)
-        self.assertEqual(set(response.json['data'][0].keys()), set(['id', 'status', 'documents', 'tenderers']))
+        self.assertEqual(set(response.json['data'][0].keys()),
+                         set(['id', 'status', 'documents', 'eligibilityDocuments', 'tenderers']))
         self.assertEqual(set(response.json['data'][1].keys()), set(['id', 'status', 'tenderers']))
         response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, self.bid_id))
         self.assertEqual(response.status, '200 OK')
-        self.assertEqual(set(response.json['data'].keys()), set(['id', 'status', 'documents', 'tenderers']))
+        self.assertEqual(set(response.json['data'].keys()),
+                         set(['id', 'status', 'documents', 'eligibilityDocuments', 'tenderers']))
         response = self.app.get('/tenders/{}/bids/{}/documents'.format(self.tender_id, self.bid_id))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(len(response.json['data']), 2)
@@ -1468,10 +1590,14 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.json['data']['title'], u'name_document.doc')
         self.assertEqual(response.json['data']['confidentiality'], u'public')
         self.assertEqual(response.json['data']['format'], u'application/msword')
-        for doc_resource in ['financial_documents', 'eligibility_documents', 'qualification_documents']:
+        for doc_resource in ['financial_documents', 'qualification_documents']:
             document_is_unaccessible_for_others(doc_resource)
             document_is_unaccessible_for_tender_owner(doc_resource)
-        documents_are_accessible_for_t_and_b_owners("documents")
+
+        for doc_resource in ['documents', 'eligibility_documents']:
+            documents_are_accessible_for_tender_owner(doc_resource)
+            public_documents_are_accessible_for_others(doc_resource)
+        all_documents_are_accessible_for_bid_owner(doc_resource)
 
         # switch to qualification
         self.app.authorization = ('Basic', ('auction', ''))
@@ -1490,15 +1616,17 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(set(response.json['data'][0].keys()),
                          set([u'date', u'status', u'id', u'value', u'tenderers', u'documents', u'eligibilityDocuments',
                               u'qualificationDocuments', u'financialDocuments', u'selfEligible', u'selfQualified']))
-        self.assertEqual(set(response.json['data'][1].keys()), set([u'date', u'status', u'id', u'value', u'tenderers',
-                                                                    u'selfEligible', u'selfQualified']))
+        self.assertEqual(set(response.json['data'][1].keys()),
+                         set([u'date', u'status', u'id', u'value', u'tenderers', u'selfEligible', u'selfQualified']))
         response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, self.bid_id))
         self.assertEqual(response.status, '200 OK')
-        self.assertEqual(set(response.json['data'].keys()), set([u'date', u'status', u'id', u'value', u'tenderers', u'documents',
-                                                                 u'eligibilityDocuments', u'qualificationDocuments', u'financialDocuments',
-                                                                 u'selfEligible', u'selfQualified']))
+        self.assertEqual(set(response.json['data'].keys()),
+                         set([u'date', u'status', u'id', u'value', u'tenderers', u'documents', u'eligibilityDocuments',
+                              u'qualificationDocuments', u'financialDocuments', u'selfEligible', u'selfQualified']))
+
+        all_documents_are_accessible_for_bid_owner(doc_resource)
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            documents_are_accessible_for_t_and_b_owners(doc_resource)
+            documents_are_accessible_for_tender_owner(doc_resource)
         all_public_documents_are_accessible_for_others()
 
         # get awards
@@ -1527,8 +1655,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(set(response.json['data'].keys()),
                          set([u'date', u'status', u'id', u'value', u'tenderers', u'documents', u'eligibilityDocuments',
                               u'qualificationDocuments', u'financialDocuments', u'selfEligible', u'selfQualified']))
-        for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            documents_are_accessible_for_t_and_b_owners(doc_resource)
+        all_documents_are_accessible_for_bid_owner(doc_resource)
+        for doc_resource in ['documents', 'financial_documents']:
+            documents_are_accessible_for_tender_owner(doc_resource)
         all_public_documents_are_accessible_for_others()
 
         # time travel
@@ -1560,8 +1689,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(set(response.json['data'].keys()),
                          set([u'date', u'status', u'id', u'value', u'tenderers', u'documents', u'eligibilityDocuments',
                               u'qualificationDocuments', u'financialDocuments', u'selfEligible', u'selfQualified']))
+        all_documents_are_accessible_for_bid_owner(doc_resource)
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            documents_are_accessible_for_t_and_b_owners(doc_resource)
+            documents_are_accessible_for_tender_owner(doc_resource)
         all_public_documents_are_accessible_for_others()
 
     def test_create_tender_bidder_document(self):
@@ -1580,7 +1710,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             key = response.json["data"]["url"].split('?')[-1]
             doc_id_by_type[doc_resource] = {'id': doc_id, 'key': key}
 
-        for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
+        for doc_resource in ['documents', 'financial_documents']:
             response = self.app.get('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
                                                                                  doc_resource, self.bid_token))
             self.assertEqual(response.status, '200 OK')
@@ -1597,12 +1727,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
             doc_id = doc_id_by_type[doc_resource]['id']
             key = doc_id_by_type[doc_resource]['key']
-            response = self.app.get('/tenders/{}/bids/{}/{}/{}?download=some_id&acc_token={}'.format(self.tender_id,
-                                                                                                     self.bid_id,
-                                                                                                     doc_resource,
-                                                                                                     doc_id,
-                                                                                                     self.bid_token),
-                                    status=404)
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?download=some_id&acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                status=404)
             self.assertEqual(response.status, '404 Not Found')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['status'], 'error')
@@ -1617,17 +1744,15 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual(response.json['errors'][0]["description"],
                              "Can't view bid document in current (active.tendering) tender status")
 
-            response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}&acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                       doc_resource, doc_id, key,
-                                                                                       self.bid_token))
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}&acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, key, self.bid_token))
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/msword')
             self.assertEqual(response.content_length, 7)
             self.assertEqual(response.body, 'content')
 
-            response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id, self.bid_id,
-                                                                       doc_resource, doc_id),
-                                    status=403)
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id), status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1648,10 +1773,10 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.app.authorization = auth
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource, self.bid_token),
-                                     upload_files=[('file', 'name.doc', 'content')],
-                                     status=403)
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, self.bid_token),
+                upload_files=[('file', 'name.doc', 'content')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1662,10 +1787,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.status, "200 OK")
         # qualify bids
         for qualification in response.json['data']:
-            response = self.app.patch_json('/tenders/{}/qualifications/{}?acc_token={}'.format(self.tender_id,
-                                                                                               qualification['id'],
-                                                                                               self.tender_token),
-                                           {"data": {"status": "active", "qualified": True, "eligible": True}})
+            response = self.app.patch_json('/tenders/{}/qualifications/{}?acc_token={}'.format(
+                self.tender_id, qualification['id'], self.tender_token),
+                {"data": {"status": "active", "qualified": True, "eligible": True}})
             self.assertEqual(response.status, "200 OK")
 
         # switch to active.pre-qualification.stand-still
@@ -1673,10 +1797,10 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
                                        {"data": {"status": 'active.pre-qualification.stand-still'}})
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource, self.bid_token),
-                                     upload_files=[('file', 'name.doc', 'content')],
-                                     status=403)
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, self.bid_token),
+                upload_files=[('file', 'name.doc', 'content')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1690,9 +1814,10 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
         self.app.authorization = ('Basic', ('token', ''))
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource,  self.bid_token),
-                                     upload_files=[('file', 'name.doc', 'content')], status=403)
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource,  self.bid_token),
+                upload_files=[('file', 'name.doc', 'content')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1727,14 +1852,12 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.json['data']['status'], "active.awarded")
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource,  self.bid_token),
-                                     upload_files=[('file', 'name.doc', 'content')],
-                                     status=403)
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid2_id, doc_resource,  self.bid_token), upload_files=[('file', 'name.doc', 'content')], status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
-                             "Can't add document in current (active.awarded) tender status")
+                             "Can't add document because award of bid is not in pending or active state")
 
         # time travel
         tender = self.db.get(self.tender_id)
@@ -1753,7 +1876,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
-                self.tender_id, self.bid_id, doc_resource,  self.bid_token), upload_files=[('file', 'name.doc', 'content')], status=403)
+                self.tender_id, self.bid_id, doc_resource,  self.bid_token),
+                upload_files=[('file', 'name.doc', 'content')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1761,6 +1886,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
     def test_put_tender_bidder_document(self):
         doc_id_by_type = {}
+        doc_id_by_type2 = {}
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
                                                                                   doc_resource, self.bid_token),
@@ -1774,11 +1900,17 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             key = response.json["data"]["url"].split('?')[-1]
             doc_id_by_type[doc_resource] = {'id': doc_id, 'key': key}
 
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                    doc_resource, doc_id,
-                                                                                    self.bid_token),
-                                    status=404,
-                                    upload_files=[('invalid_name', 'name.doc', 'content')])
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid2_id,
+                                                                                  doc_resource, self.bid2_token),
+                                     upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
+            self.assertEqual(response.status, '201 Created')
+            self.assertEqual(response.content_type, 'application/json')
+            doc_id_by_type2[doc_resource] = {'id': response.json["data"]['id'], 'key': response.json["data"]["url"].split('?')[-1]}
+
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                status=404,
+                upload_files=[('invalid_name', 'name.doc', 'content')])
             self.assertEqual(response.status, '404 Not Found')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['status'], 'error')
@@ -1787,26 +1919,23 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
                     u'body', u'name': u'file'}
             ])
 
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                    doc_resource, doc_id,
-                                                                                    self.bid_token),
-                                    upload_files=[('file', 'name.doc', 'content2')])
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                upload_files=[('file', 'name.doc', 'content2')])
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(doc_id, response.json["data"]["id"])
             key = response.json["data"]["url"].split('?')[-1]
 
-            response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}&acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                       doc_resource, doc_id, key,
-                                                                                       self.bid_token))
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}&acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, key, self.bid_token))
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/msword')
             self.assertEqual(response.content_length, 8)
             self.assertEqual(response.body, 'content2')
 
-            response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                    doc_resource, doc_id,
-                                                                                    self.bid_token))
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token))
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(doc_id, response.json["data"]["id"])
@@ -1838,13 +1967,10 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.app.authorization = auth
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id,
-                                                                                    self.bid_id,
-                                                                                    doc_resource,
-                                                                                    doc_id_by_type[doc_resource]['id'],
-                                                                                    self.bid_token),
-                                    upload_files=[('file', 'name.doc', 'content4')],
-                                    status=403)
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id'], self.bid_token),
+                upload_files=[('file', 'name.doc', 'content4')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1883,13 +2009,10 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
         self.app.authorization = ('Basic', ('broker', ''))
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id,
-                                                                                    self.bid_id,
-                                                                                    doc_resource,
-                                                                                    doc_id_by_type[doc_resource]['id'],
-                                                                                    self.bid_token),
-                                    upload_files=[('file', 'name.doc', 'content4')],
-                                    status=403)
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id'], self.bid_token),
+                upload_files=[('file', 'name.doc', 'content4')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1907,11 +2030,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
         self.app.authorization = ('Basic', ('token', ''))
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id,
-                                                                       self.bid_id,
-                                                                       doc_resource,
-                                                                       doc_id_by_type[doc_resource]['id']),
-                                    upload_files=[('file', 'name.doc', 'content4')])
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id']),
+                upload_files=[('file', 'name.doc', 'content4')])
             self.assertEqual(response.status, '200 OK')
 
         # get awards
@@ -1926,16 +2047,14 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.json['data']['status'], "active.awarded")
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id,
-                                                                       self.bid_id,
-                                                                       doc_resource,
-                                                                       doc_id_by_type[doc_resource]['id']),
-                                    upload_files=[('file', 'name.doc', 'content4')],
-                                    status=403)
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}'.format(
+                self.tender_id, self.bid2_id, doc_resource, doc_id_by_type2[doc_resource]['id']),
+                upload_files=[('file', 'name.doc', 'content4')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
-                             "Can't update document in current (active.awarded) tender status")
+                             "Can't update document because award of bid is not in pending or active state")
 
         # time travel
         tender = self.db.get(self.tender_id)
@@ -1947,20 +2066,16 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         response = self.app.get('/tenders/{}'.format(self.tender_id))
         contract_id = response.json['data']['contracts'][-1]['id']
         self.app.authorization = ('Basic', ('token', ''))
-        self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id,
-                                                                           contract_id,
-                                                                           self.tender_token),
+        self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract_id, self.tender_token),
                             {"data": {"status": "active"}})
         response = self.app.get('/tenders/{}'.format(self.tender_id))
         self.assertEqual(response.json['data']['status'], 'complete')
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}'.format(self.tender_id,
-                                                                       self.bid_id,
-                                                                       doc_resource,
-                                                                       doc_id_by_type[doc_resource]['id']),
-                                    upload_files=[('file', 'name.doc', 'content4')],
-                                    status=403)
+            response = self.app.put('/tenders/{}/bids/{}/{}/{}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id']),
+                upload_files=[('file', 'name.doc', 'content4')],
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -1968,6 +2083,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
     def test_patch_tender_bidder_document(self):
         doc_id_by_type = {}
+        doc_id_by_type2 = {}
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
                                                                                   doc_resource, self.bid_token),
@@ -1981,10 +2097,17 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             key = response.json["data"]["url"].split('?')[-1]
             doc_id_by_type[doc_resource] = {'id': doc_id, 'key': key}
 
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid2_id,
+                                                                                  doc_resource, self.bid2_token),
+                                     upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
+            self.assertEqual(response.status, '201 Created')
+            self.assertEqual(response.content_type, 'application/json')
+            doc_id_by_type2[doc_resource] = {'id': response.json["data"]['id'], 'key': response.json["data"]["url"].split('?')[-1]}
+
             # upload private document
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource, self.bid_token),
-                                     upload_files=[('file', 'name_{}_private.doc'.format(doc_resource[:-1]), 'content')])
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, self.bid_token),
+                upload_files=[('file', 'name_{}_private.doc'.format(doc_resource[:-1]), 'content')])
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
             doc_id = response.json["data"]['id']
@@ -1992,56 +2115,59 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual('name_{}_private.doc'.format(doc_resource[:-1]), response.json["data"]["title"])
             key = response.json["data"]["url"].split('?')[-1]
             doc_id_by_type[doc_resource+'private'] = {'id': doc_id, 'key': key}
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {'confidentiality': 'buyerOnly',
-                                                     'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {'confidentiality': 'buyerOnly',
+                          'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
+            self.assertEqual(response.status, '200 OK')
+
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid2_id, doc_resource, self.bid2_token),
+                upload_files=[('file', 'name_{}_private.doc'.format(doc_resource[:-1]), 'content')])
+            self.assertEqual(response.status, '201 Created')
+            self.assertEqual(response.content_type, 'application/json')
+            doc_id = response.json["data"]['id']
+            self.assertIn(doc_id, response.headers['Location'])
+            self.assertEqual('name_{}_private.doc'.format(doc_resource[:-1]), response.json["data"]["title"])
+            key = response.json["data"]["url"].split('?')[-1]
+            doc_id_by_type2[doc_resource+'private'] = {'id': doc_id, 'key': key}
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid2_id, doc_resource, doc_id, self.bid2_token),
+                {"data": {'confidentiality': 'buyerOnly',
+                          'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
             self.assertEqual(response.status, '200 OK')
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             doc_id = doc_id_by_type[doc_resource]['id']
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id,
-                                                                                           self.bid_id,
-                                                                                           doc_resource,
-                                                                                           doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {"documentOf": "lot"}},
-                                           status=422)
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {"documentOf": "lot"}}, status=422)
             self.assertEqual(response.status, '422 Unprocessable Entity')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['status'], 'error')
             self.assertEqual(response.json['errors'], [
-                {u'description': [u'This field is required.'],
-                 u'location': u'body',
-                 u'name': u'relatedItem'},
+                {u'description': [u'This field is required.'], u'location': u'body', u'name': u'relatedItem'},
             ])
 
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {"documentOf": "lot", "relatedItem": '0' * 32}},
-                                           status=422)
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {"documentOf": "lot", "relatedItem": '0' * 32}}, status=422)
             self.assertEqual(response.status, '422 Unprocessable Entity')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['status'], 'error')
             self.assertEqual(response.json['errors'], [
-                {u'description': [u'relatedItem should be one of lots'],
-                 u'location': u'body',
-                 u'name': u'relatedItem'}
+                {u'description': [u'relatedItem should be one of lots'], u'location': u'body', u'name': u'relatedItem'}
             ])
 
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {"description": "document description", 'language': 'en'}})
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {"description": "document description", 'language': 'en'}})
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(doc_id, response.json["data"]["id"])
 
-            response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                    doc_resource, doc_id,
-                                                                                    self.bid_token))
+            response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token))
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(doc_id, response.json["data"]["id"])
@@ -2050,16 +2176,14 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
             # test confidentiality change
             doc_id = doc_id_by_type[doc_resource+'private']['id']
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {'confidentiality': 'public', 'confidentialityRationale': ''}})
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {'confidentiality': 'public', 'confidentialityRationale': ''}})
             self.assertEqual(response.status, '200 OK')
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {'confidentiality': 'buyerOnly',
-                                                     'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {'confidentiality': 'buyerOnly',
+                          'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
             self.assertEqual(response.status, '200 OK')
 
         # switch to active.pre-qualification
@@ -2072,7 +2196,8 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
                 self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id'], self.bid_token),
-                {"data": {"description": "document description"}}, status=403)
+                {"data": {"description": "document description"}},
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -2095,14 +2220,16 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
                 self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id'], self.bid_token),
-                {"data": {"description": "document description"}}, status=403)
+                {"data": {"description": "document description"}},
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
                              "Can't update document in current (active.pre-qualification.stand-still) tender status")
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
                 self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource+'private']['id'], self.bid_token),
-                {"data": {"description": "document description"}}, status=403)
+                {"data": {"description": "document description"}},
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -2118,14 +2245,16 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
                 self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id'], self.bid_token),
-                {"data": {"description": "document description"}}, status=403)
+                {"data": {"description": "document description"}},
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
                              "Can't update document in current (active.auction) tender status")
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
                 self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource+'private']['id'], self.bid_token),
-                {"data": {"description": "document description"}}, status=403)
+                {"data": {"description": "document description"}},
+                status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
@@ -2174,7 +2303,6 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.body, 'null')
 
-
         # get awards
         response = self.app.get('/tenders/{}/awards'.format(self.tender_id))
         # get pending award
@@ -2188,21 +2316,21 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
-                self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource]['id'], self.bid_token),
+                self.tender_id, self.bid2_id, doc_resource, doc_id_by_type2[doc_resource]['id'], self.bid2_token),
                 {"data": {"description": "document description"}},
                 status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
-                             "Can't update document in current (active.awarded) tender status")
+                             "Can't update document because award of bid is not in pending or active state")
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
-                self.tender_id, self.bid_id, doc_resource, doc_id_by_type[doc_resource+'private']['id'], self.bid_token),
+                self.tender_id, self.bid2_id, doc_resource, doc_id_by_type2[doc_resource+'private']['id'], self.bid2_token),
                 {"data": {"description": "document description"}},
                 status=403)
             self.assertEqual(response.status, '403 Forbidden')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(response.json['errors'][0]["description"],
-                             "Can't update document in current (active.awarded) tender status")
+                             "Can't update document because award of bid is not in pending or active state")
 
         # time travel
         tender = self.db.get(self.tender_id)
@@ -2213,9 +2341,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         # sign contract
         response = self.app.get('/tenders/{}'.format(self.tender_id))
         contract_id = response.json['data']['contracts'][-1]['id']
-        self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id,
-                                                                           contract_id,
-                                                                           self.tender_token),
+        self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract_id, self.tender_token),
                             {"data": {"status": "active"}})
         response = self.app.get('/tenders/{}'.format(self.tender_id))
         self.assertEqual(response.json['data']['status'], 'complete')
@@ -2242,9 +2368,9 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         doc_id_by_type = {}
         private_doc_id_by_type = {}
         for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
-                self.tender_id, self.bid_id, doc_resource, self.bid_token),
-                upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
+                                                                                  doc_resource, self.bid_token),
+                                     upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
 
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
@@ -2253,11 +2379,10 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual('name_{}.doc'.format(doc_resource[:-1]), response.json["data"]["title"])
             key = response.json["data"]["url"].split('?')[-1]
             doc_id_by_type[doc_resource] = {'id': doc_id, 'key': key}
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {'confidentiality': 'buyerOnly',
-                                                     'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
+            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
+                {"data": {'confidentiality': 'buyerOnly',
+                          'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
             self.assertEqual(response.status, '200 OK')
             self.assertEqual(response.content_type, 'application/json')
             self.assertEqual(doc_id, response.json["data"]["id"])
@@ -2270,48 +2395,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertEqual(response.content_type, 'application/json')
 
             self.assertEqual('buyerOnly', response.json["data"]["confidentiality"])
-            self.assertEqual('Only our company sells badgers with pink hair.',
-                             response.json["data"]["confidentialityRationale"])
-
-    def test_patch_and_put_document_into_invalid_bid(self):
-        doc_id_by_type = {}
-        for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource, self.bid_token),
-                                     upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
-
-            self.assertEqual(response.status, '201 Created')
-            self.assertEqual(response.content_type, 'application/json')
-            doc_id = response.json["data"]['id']
-            self.assertIn(doc_id, response.headers['Location'])
-            self.assertEqual('name_{}.doc'.format(doc_resource[:-1]), response.json["data"]["title"])
-            key = response.json["data"]["url"].split('?')[-1]
-            doc_id_by_type[doc_resource] = {'id': doc_id, 'key': key}
-
-        # update tender. we can set value that is less than a value in bids as
-        # they will be invalidated by this request
-        response = self.app.patch_json('/tenders/{}?acc_token={}'.format(self.tender_id, self.tender_token),
-                                       {"data":{"value": {'amount': 300.0}}})
-        self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']["value"]["amount"], 300)
-
-        for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
-            doc_id = doc_id_by_type[doc_resource]['id']
-            response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                           doc_resource, doc_id,
-                                                                                           self.bid_token),
-                                           {"data": {'confidentiality': 'buyerOnly',
-                                                     'confidentialityRationale': 'Only our company sells badgers with pink hair.'}},
-                                           status=403)
-            self.assertEqual(response.status, '403 Forbidden')
-            self.assertEqual(response.content_type, 'application/json')
-            self.assertEqual(response.json['errors'][0]["description"], "Can't update document data for 'invalid' bid")
-            response = self.app.put('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                    doc_resource, doc_id,
-                                                                                    self.bid_token),
-                                    'updated', content_type='application/msword', status=403)
-            self.assertEqual(response.status, '403 Forbidden')
-            self.assertEqual(response.json['errors'][0]["description"], "Can't update document in 'invalid' bid")
+            self.assertEqual('Only our company sells badgers with pink hair.', response.json["data"]["confidentialityRationale"])
 
     def test_download_tender_bidder_document(self):
         doc_id_by_type = {}
@@ -2326,16 +2410,17 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             self.assertIn(doc_id, response.headers['Location'])
             self.assertEqual('name_{}.doc'.format(doc_resource[:-1]), response.json["data"]["title"])
             key = response.json["data"]["url"].split('?')[-1]
-            private_doc_id_by_type[doc_resource] = {'id': response.json["data"]['id'], 'key': response.json["data"]["url"].split('?')[-1]}
+            private_doc_id_by_type[doc_resource] = {'id': response.json["data"]['id'],
+                                                    'key': response.json["data"]["url"].split('?')[-1]}
 
             response = self.app.patch_json('/tenders/{}/bids/{}/{}/{}?acc_token={}'.format(
                 self.tender_id, self.bid_id, doc_resource, doc_id, self.bid_token),
-                { "data": {'confidentiality': 'buyerOnly',
-                           'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
+                {"data": {'confidentiality': 'buyerOnly',
+                          'confidentialityRationale': 'Only our company sells badgers with pink hair.'}})
 
-            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(self.tender_id, self.bid_id,
-                                                                                  doc_resource, self.bid_token),
-                                     upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
+            response = self.app.post('/tenders/{}/bids/{}/{}?acc_token={}'.format(
+                self.tender_id, self.bid_id, doc_resource, self.bid_token),
+                upload_files=[('file', 'name_{}.doc'.format(doc_resource[:-1]), 'content')])
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
             doc_id = response.json["data"]['id']
@@ -2346,25 +2431,21 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
             for container in private_doc_id_by_type, doc_id_by_type:
                 response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
-                    self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                    self.bid_token, container[doc_resource]['key']))
+                    self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], self.bid_token, container[doc_resource]['key']))
                 self.assertEqual(response.status, '200 OK')
                 self.assertEqual(response.body, 'content')
                 self.assertEqual(response.headers['Content-Disposition'],  'attachment; filename=name_{}.doc'.format(doc_resource[:-1]))
                 self.assertEqual(response.headers['Content-Type'],  'application/msword; charset=UTF-8')
 
                 response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
-                    self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                    self.tender_token, container[doc_resource]['key']),
+                    self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], self.tender_token, container[doc_resource]['key']),
                     status=403)
                 self.assertEqual(response.status, '403 Forbidden')
                 self.assertEqual(response.json['errors'][0]["description"],
                                  "Can't view bid document in current (active.tendering) tender status")
 
                 response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}'.format(
-                    self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                    container[doc_resource]['key']),
-                    status=403)
+                    self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], container[doc_resource]['key']), status=403)
                 self.assertEqual(response.status, '403 Forbidden')
                 self.assertEqual(response.json['errors'][0]["description"],
                                  "Can't view bid document in current (active.tendering) tender status")
@@ -2376,35 +2457,37 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
                 for container in private_doc_id_by_type, doc_id_by_type:
                     response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
-                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                        self.bid_token, container[doc_resource]['key']))
+                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], self.bid_token, container[doc_resource]['key']))
                     self.assertEqual(response.status, '200 OK')
                     self.assertEqual(response.body, 'content')
                     self.assertEqual(response.headers['Content-Disposition'],  'attachment; filename=name_{}.doc'.format(doc_resource[:-1]))
                     self.assertEqual(response.headers['Content-Type'],  'application/msword; charset=UTF-8')
 
-            for container in private_doc_id_by_type, doc_id_by_type:
-                response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
-                    self.tender_id, self.bid_id, 'documents', container['documents']['id'],
-                    self.tender_token, container['documents']['key']))
-                self.assertEqual(response.status, '200 OK')
-
-            for doc_resource in ['financial_documents', 'eligibility_documents', 'qualification_documents']:
+            for doc_resource in ['documents', 'eligibility_documents']:
                 for container in private_doc_id_by_type, doc_id_by_type:
                     response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
                         self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                        self.tender_token, container[doc_resource]['key']),
-                        status=403)
-                    self.assertEqual(response.status, '403 Forbidden')
-                    self.assertEqual(response.json['errors'][0]["description"],
-                                     "Can't view bid document in current ({}) tender status".format(status))
+                        self.tender_token, container[doc_resource]['key']))
+                    self.assertEqual(response.status, '200 OK')
 
-            for doc_resource in ['financial_documents', 'eligibility_documents', 'qualification_documents']:
+            for doc_resource in ['financial_documents', 'qualification_documents']:
+                for container in private_doc_id_by_type, doc_id_by_type:
+                    response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
+                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
+                        self.tender_token, container[doc_resource]['key']), status=403)
+                    self.assertEqual(response.status, '403 Forbidden')
+                    self.assertEqual(response.json['errors'][0]["description"], "Can't view bid document in current ({}) tender status".format(status))
+
+            # for doc_resource in ['documents', 'eligibility_documents']:
+                # for container in private_doc_id_by_type, doc_id_by_type:
+                    # response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
+                        # self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], self.tender_token, container[doc_resource]['key']))
+                    # self.assertEqual(response.status, '200 OK')
+
+            for doc_resource in ['financial_documents', 'qualification_documents']:
                 for container in private_doc_id_by_type, doc_id_by_type:
                     response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}'.format(
-                        self.tender_id, self.bid_id, doc_resource,
-                        container[doc_resource]['id'], container[doc_resource]['key']),
-                        status=403)
+                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], container[doc_resource]['key']), status=403)
                     self.assertEqual(response.status, '403 Forbidden')
                     self.assertEqual(response.json['errors'][0]["description"],
                                      "Can't view bid document in current ({}) tender status".format(status))
@@ -2426,7 +2509,8 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         response = self.app.patch_json('/tenders/{}?acc_token={}'.format(self.tender_id, self.tender_token),
                                        {"data": {"status": 'active.pre-qualification.stand-still'}})
         self.assertEqual(response.json['data']['status'], 'active.pre-qualification.stand-still')
-        test_bids_documents_after_tendering_resource(self, doc_id_by_type, private_doc_id_by_type, 'active.pre-qualification.stand-still')
+        test_bids_documents_after_tendering_resource(self, doc_id_by_type,
+                                                     private_doc_id_by_type, 'active.pre-qualification.stand-still')
 
         self.time_shift('active.auction')
         self.check_chronograph()
@@ -2459,8 +2543,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
                 for container in private_doc_id_by_type, doc_id_by_type:
                     response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
-                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                        self.bid_token, container[doc_resource]['key']))
+                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], self.bid_token, container[doc_resource]['key']))
                     self.assertEqual(response.status, '200 OK')
                     self.assertEqual(response.body, 'content')
                     self.assertEqual(response.headers['Content-Disposition'],  'attachment; filename=name_{}.doc'.format(doc_resource[:-1]))
@@ -2469,8 +2552,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
             for doc_resource in ['documents', 'financial_documents', 'eligibility_documents', 'qualification_documents']:
                 for container in private_doc_id_by_type, doc_id_by_type:
                     response = self.app.get('/tenders/{}/bids/{}/{}/{}?acc_token={}&{}'.format(
-                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'],
-                        self.tender_token, container[doc_resource]['key']))
+                        self.tender_id, self.bid_id, doc_resource, container[doc_resource]['id'], self.tender_token, container[doc_resource]['key']))
 
                     self.assertEqual(response.status, '200 OK')
                     self.assertEqual(response.body, 'content')
@@ -2486,9 +2568,7 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
                 self.assertEqual(response.headers['Content-Type'],  'application/msword; charset=UTF-8')
 
                 response = self.app.get('/tenders/{}/bids/{}/{}/{}?{}'.format(
-                    self.tender_id, self.bid_id, doc_resource,
-                    private_doc_id_by_type[doc_resource]['id'], private_doc_id_by_type[doc_resource]['key']),
-                    status=403)
+                    self.tender_id, self.bid_id, doc_resource, private_doc_id_by_type[doc_resource]['id'], private_doc_id_by_type[doc_resource]['key']), status=403)
                 self.assertEqual(response.status, '403 Forbidden')
 
         test_bids_documents_after_auction_resource(self, doc_id_by_type, private_doc_id_by_type, 'active.pre-qualification')
@@ -2506,13 +2586,14 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
 
 
     def test_create_tender_bidder_document_nopending(self):
-        response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': test_bids[0]})
+        response = self.app.post_json('/tenders/{}/bids'.format(
+            self.tender_id), {'data': test_bids[0]})
         bid = response.json['data']
         token = response.json['access']['token']
         bid_id = bid['id']
 
-        response = self.app.post('/tenders/{}/bids/{}/documents?acc_token={}'.format(self.tender_id, bid_id, token),
-                                 upload_files=[('file', 'name.doc', 'content')])
+        response = self.app.post('/tenders/{}/bids/{}/documents?acc_token={}'.format(
+            self.tender_id, bid_id, token), upload_files=[('file', 'name.doc', 'content')])
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         doc_id = response.json["data"]['id']
@@ -2521,20 +2602,21 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         # switch to active.pre-qualification
         self.set_status('active.pre-qualification', {"id": self.tender_id, 'status': 'active.tendering'})
         self.app.authorization = ('Basic', ('chronograph', ''))
-        response = self.app.patch_json('/tenders/{}'.format(self.tender_id), {"data": {"id": self.tender_id}})
+        response = self.app.patch_json('/tenders/{}'.format(
+            self.tender_id), {"data": {"id": self.tender_id}})
         self.assertEqual(response.json['data']['status'], 'active.pre-qualification')
 
         # qualify bids
         response = self.app.get('/tenders/{}/qualifications'.format(self.tender_id))
         self.app.authorization = ('Basic', ('token', ''))
         for qualification in response.json['data']:
-            response = self.app.patch_json('/tenders/{}/qualifications/{}'.format(self.tender_id, qualification['id']),
-                                           {"data": {"status": "active", "qualified": True, "eligible": True}})
+            response = self.app.patch_json('/tenders/{}/qualifications/{}'.format(
+            self.tender_id, qualification['id']), {"data": {"status": "active", "qualified": True, "eligible": True}})
             self.assertEqual(response.status, "200 OK")
 
         # switch to active.pre-qualification.stand-still
-        response = self.app.patch_json('/tenders/{}'.format(self.tender_id),
-                                       {"data": {"status": 'active.pre-qualification.stand-still'}})
+        response = self.app.patch_json('/tenders/{}'.format(
+            self.tender_id), {"data": {"status": 'active.pre-qualification.stand-still'}})
         self.assertEqual(response.json['data']['status'], 'active.pre-qualification.stand-still')
 
         # switch to active.auction
@@ -2555,39 +2637,31 @@ class TenderStage2EUBidDocumentResourceTest(BaseCompetitiveDialogEUStage2Content
         self.assertEqual(response.json['data']['status'], "active.qualification")
 
         self.app.authorization = ('Basic', ('broker', ''))
-        response = self.app.patch_json('/tenders/{}/bids/{}/documents/{}?acc_token={}'.format(self.tender_id, bid_id,
-                                                                                              doc_id, token),
-                                       {"data": {"description": "document description"}},
-                                       status=403)
+        response = self.app.patch_json('/tenders/{}/bids/{}/documents/{}?acc_token={}'.format(
+            self.tender_id, bid_id, doc_id, token), {"data": {"description": "document description"}}, status=403)
         self.assertEqual(response.status, '403 Forbidden')
         self.assertEqual(response.content_type, 'application/json')
-        self.assertEqual(response.json['errors'][0]["description"],
-                         "Can't update document because award of bid is not in pending state")
+        self.assertEqual(response.json['errors'][0]["description"], "Can't update document because award of bid is not in pending or active state")
 
-        response = self.app.put('/tenders/{}/bids/{}/documents/{}?acc_token={}'.format(self.tender_id, bid_id,
-                                                                                       doc_id, token),
-                                'content3',
-                                content_type='application/msword',
-                                status=403)
+        response = self.app.put('/tenders/{}/bids/{}/documents/{}?acc_token={}'.format(
+            self.tender_id, bid_id, doc_id, token), 'content3', content_type='application/msword', status=403)
         self.assertEqual(response.status, '403 Forbidden')
         self.assertEqual(response.content_type, 'application/json')
-        self.assertEqual(response.json['errors'][0]["description"],
-                         "Can't update document because award of bid is not in pending state")
+        self.assertEqual(response.json['errors'][0]["description"], "Can't update document because award of bid is not in pending or active state")
 
-        response = self.app.post('/tenders/{}/bids/{}/documents?acc_token={}'.format(self.tender_id, bid_id, token),
-                                 upload_files=[('file', 'name.doc', 'content')], status=403)
+        response = self.app.post('/tenders/{}/bids/{}/documents?acc_token={}'.format(
+            self.tender_id, bid_id, token), upload_files=[('file', 'name.doc', 'content')], status=403)
         self.assertEqual(response.status, '403 Forbidden')
         self.assertEqual(response.content_type, 'application/json')
-        self.assertEqual(response.json['errors'][0]["description"],
-                         "Can't add document because award of bid is not in pending state")
+        self.assertEqual(response.json['errors'][0]["description"], "Can't add document because award of bid is not in pending or active state")
 
-
-def suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TenderStage2EUBidDocumentResourceTest))
-    suite.addTest(unittest.makeSuite(TenderStage2EUBidFeaturesResourceTest))
-    suite.addTest(unittest.makeSuite(TenderStage2EUBidResourceTest))
-    return suite
+#
+# def suite():
+#     suite = unittest.TestSuite()
+#     suite.addTest(unittest.makeSuite(TenderBidDocumentResourceTest))
+#     suite.addTest(unittest.makeSuite(TenderBidFeaturesResourceTest))
+#     suite.addTest(unittest.makeSuite(TenderStage2EUBidResourceTest))
+#     return suite
 
 
 if __name__ == '__main__':
