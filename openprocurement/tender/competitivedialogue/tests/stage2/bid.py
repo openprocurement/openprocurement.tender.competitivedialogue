@@ -2823,6 +2823,41 @@ class TenderStage2UABidResourceTest(BaseCompetitiveDialogUAStage2ContentWebTest)
              u'name': u'data'},
         ])
 
+        response = self.app.post_json(request_path, {'data': {'selfEligible': True, 'selfQualified': True,
+                                                              'tenderers': [{
+                                                                  "name": u"Державне управління справами",
+                                                                  "name_en": u"State administration",
+                                                                  "identifier": {
+                                                                      "legalName_en": u"dus.gov.ua",
+                                                                      "scheme": u"UA-EDR",
+                                                                      "id": u"00037256",
+                                                                      "uri": u"http://www.dus.gov.ua/"
+                                                                  },
+                                                                  "address": {
+                                                                      "countryName": u"Україна",
+                                                                      "postalCode": u"01220",
+                                                                      "region": u"м. Київ",
+                                                                      "locality": u"м. Київ",
+                                                                      "streetAddress": u"вул. Банкова, 11, корпус 1"
+                                                                  },
+                                                                  "contactPoint": {
+                                                                      "name": u"Державне управління справами",
+                                                                      "name_en": u"State administration",
+                                                                      "telephone": u"0440000000"
+                                                                  }
+                                                              }],
+                                                              "value": {"amount": 500}}},
+                                      status=403)
+
+        self.assertEqual(response.status, '403 Forbidden')
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['status'], 'error')
+        self.assertEqual(response.json['errors'], [{
+            "location": u"body",
+            "name": u"data",
+            "description": u"Firm can't create bid"
+        }])
+
     def test_create_tender_bidder(self):
         response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
                                       {'data': {'selfEligible': True, 'selfQualified': True,
