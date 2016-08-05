@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from openprocurement.tender.openeu.views.bid import TenderBidResource as BaseResourceEU
-from openprocurement.tender.openua.views.bid import TenderBidResource as BaseResourceUA
+from openprocurement.tender.openua.views.bid import TenderUABidResource as BaseResourceUA
 from openprocurement.tender.competitivedialogue.models import STAGE_2_UA_TYPE, STAGE_2_EU_TYPE
 from openprocurement.tender.competitivedialogue.utils import stage2_bid_post
 from openprocurement.api.utils import (
