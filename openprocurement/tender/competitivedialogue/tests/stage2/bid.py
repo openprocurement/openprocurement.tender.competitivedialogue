@@ -213,6 +213,8 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         self.assertEqual(bid['tenderers'][0]['name'], test_bids[0]['tenderers'][0]['name'])
         self.assertIn('id', bid)
         self.assertIn(bid['id'], response.headers['Location'])
+        self.assertNotIn('transfer_token', bid)
+        self.assertIn('transfer', response.json['access'])
 
         for status in ('active', 'unsuccessful', 'deleted', 'invalid'):
             response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id),
@@ -341,6 +343,7 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         response = self.app.get('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], bid_token))
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
+        self.assertNotIn('transfer_token', response.json['data'])
         self.assertEqual(response.json['data'], bid)
 
         # switch to active.pre-qualification
@@ -2935,6 +2938,8 @@ class TenderStage2UABidResourceTest(BaseCompetitiveDialogUAStage2ContentWebTest)
         self.assertEqual(bid['tenderers'][0]['name'], test_bids[0]['tenderers'][0]['name'])
         self.assertIn('id', bid)
         self.assertIn(bid['id'], response.headers['Location'])
+        self.assertIn('transfer', response.json['access'])
+        self.assertNotIn('transfer_token', bid)
 
         # set tender period in future
         data = deepcopy(test_tender_stage2_data_ua)
@@ -3627,7 +3632,9 @@ class TenderStage2UABidDocumentResourceTest(BaseCompetitiveDialogUAStage2Content
         self.bid_id = bid['id']
         self.bid_token = response.json['access']['token']
 
+
     def test_not_found(self):
+        self.assertNotIn('transfer_token', self.bid)
         response = self.app.post('/tenders/some_id/bids/some_id/documents',
                                  status=404,
                                  upload_files=[('file', 'name.doc', 'content')])
