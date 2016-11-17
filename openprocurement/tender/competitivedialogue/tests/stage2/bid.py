@@ -3636,7 +3636,6 @@ class TenderStage2UABidDocumentResourceTest(BaseCompetitiveDialogUAStage2Content
         self.bid_id = bid['id']
         self.bid_token = response.json['access']['token']
 
-
     def test_not_found(self):
         response = self.app.post('/tenders/some_id/bids/some_id/documents',
                                  status=404,
