@@ -918,8 +918,8 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertIn('invalidationDate', response.json['data']['enquiryPeriod'])
-        self.assertNotIn('transfer_token', bid)
         new_tender = response.json['data']
+        self.assertNotIn('transfer_token', new_tender);
         new_enquiryPeriod = new_tender.pop('enquiryPeriod')
         new_dateModified = new_tender.pop('dateModified')
         tender.pop('enquiryPeriod')
