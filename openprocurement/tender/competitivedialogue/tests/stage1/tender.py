@@ -640,6 +640,9 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest):
         response = self.app.post_json('/tenders', {"data": test_tender_data_eu})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
+        self.assertNotIn('transfer_token', response.json['data'])
+        self.assertIn('transfer', response.json['access'])
+
         tender = response.json['data']
         tender_set = set(tender)
         if 'procurementMethodDetails' in tender_set:
@@ -698,6 +701,7 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['data'], tender)
+        self.assertNotIn('transfer_token', response.json['data'])
 
         response = self.app.get('/tenders/{}?opt_jsonp=callback'.format(tender['id']))
         self.assertEqual(response.status, '200 OK')
@@ -914,6 +918,7 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertIn('invalidationDate', response.json['data']['enquiryPeriod'])
+        self.assertNotIn('transfer_token', bid)
         new_tender = response.json['data']
         new_enquiryPeriod = new_tender.pop('enquiryPeriod')
         new_dateModified = new_tender.pop('dateModified')
@@ -1926,6 +1931,9 @@ class CompetitiveDialogUAResourceTest(BaseCompetitiveDialogUAWebTest):
         response = self.app.post_json('/tenders', {"data": test_tender_data_ua})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
+        self.assertNotIn('transfer_token', response.json['data'])
+        self.assertIn('transfer', response.json['access'])
+
         tender = response.json['data']
         tender_set = set(tender)
         if 'procurementMethodDetails' in tender_set:
@@ -1982,6 +1990,7 @@ class CompetitiveDialogUAResourceTest(BaseCompetitiveDialogUAWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['data'], tender)
+        self.assertNotIn('transfer_token', response.json['data'])
 
         response = self.app.get('/tenders/{}?opt_jsonp=callback'.format(tender['id']))
         self.assertEqual(response.status, '200 OK')
