@@ -242,6 +242,8 @@ class TenderStage2EUBidResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest)
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
         bid_token = response.json['access']['token']
+        self.assertIn('transfer', response.json['access'])
+        self.assertNotIn('transfer_token', bid)
 
         response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], bid_token),
                                        {"data": {"value": {"amount": 600}}},
@@ -2980,6 +2982,8 @@ class TenderStage2UABidResourceTest(BaseCompetitiveDialogUAStage2ContentWebTest)
         self.assertEqual(response.content_type, 'application/json')
         bid = response.json['data']
         bid_token = response.json['access']['token']
+        self.assertIn('transfer', response.json['access'])
+        self.assertNotIn('transfer_token', bid)
 
         response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], bid_token),
                                        {'data': {'value': {'amount': 600}}},
