@@ -3638,7 +3638,6 @@ class TenderStage2UABidDocumentResourceTest(BaseCompetitiveDialogUAStage2Content
 
 
     def test_not_found(self):
-        self.assertNotIn('transfer_token', self.bid)
         response = self.app.post('/tenders/some_id/bids/some_id/documents',
                                  status=404,
                                  upload_files=[('file', 'name.doc', 'content')])
