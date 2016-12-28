@@ -238,7 +238,6 @@ class Tender(BaseTenderEU):
             (Allow, '{}_{}'.format(self.owner, self.owner_token), 'upload_tender_documents'),
             (Allow, '{}_{}'.format(self.owner, self.owner_token), 'edit_complaint'),
             (Allow, 'g:competitive_dialogue', 'extract_credentials'),
-            (Allow, 'g:competitive_dialogue', 'create_tender'),
             (Allow, 'g:competitive_dialogue', 'edit_tender'),
         ])
         return acl
@@ -348,6 +347,7 @@ def stage2__acl__(obj):
         (Allow, '{}_{}'.format(obj.owner, obj.owner_token), 'upload_tender_documents'),
         (Allow, '{}_{}'.format(obj.owner, obj.owner_token), 'edit_complaint'),
         (Allow, 'g:competitive_dialogue', 'edit_tender')
+        (Allow, 'g:competitive_dialogue', 'create_tender'),
     ])
     return acl
 
