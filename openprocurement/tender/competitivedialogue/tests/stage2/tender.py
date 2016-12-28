@@ -329,6 +329,8 @@ class CompetitiveDialogStage2EUResourceTest(BaseCompetitiveDialogEUStage2WebTest
             response = self.app.post_json('/tenders', {'data': test_tender_stage2_data_eu})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
+            self.assertIn('transfer', response.json['access'])
+            self.assertNotIn('transfer_token', response.json['data'])
             self.set_tender_status(response.json['data'], response.json['access']['token'], 'draft.stage2')
             response = self.set_tender_status(response.json['data'], response.json['access']['token'],
                                               'active.tendering')
@@ -1497,7 +1499,10 @@ class TenderStage2UAResourceTest(BaseCompetitiveDialogUAStage2WebTest):
             response = self.app.post_json('/tenders', {'data': test_tender_stage2_data_eu})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
+            self.assertIn('transfer', response.json['access'])
+            self.assertNotIn('transfer_token', response.json['data'])
             self.set_tender_status(response.json['data'], response.json['access']['token'], 'draft.stage2')
+
             response = self.set_tender_status(response.json['data'], response.json['access']['token'],
                                               'active.tendering')
             tenders.append(response.json['data'])
