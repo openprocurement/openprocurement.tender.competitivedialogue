@@ -353,6 +353,8 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest):
             response = self.app.post_json('/tenders', {'data': data})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
+            self.assertIn('transfer', response.json['access'])
+            self.assertNotIn('transfer_token', response.json['data'])
 
         ids = ','.join([i['id'] for i in tenders])
 
@@ -1673,6 +1675,8 @@ class CompetitiveDialogUAResourceTest(BaseCompetitiveDialogUAWebTest):
             response = self.app.post_json('/tenders', {'data': data})
             self.assertEqual(response.status, '201 Created')
             self.assertEqual(response.content_type, 'application/json')
+            self.assertIn('transfer', response.json['access'])
+            self.assertNotIn('transfer_token', response.json['data'])
 
         ids = ','.join([i['id'] for i in tenders])
 
@@ -2204,6 +2208,7 @@ class CompetitiveDialogUAResourceTest(BaseCompetitiveDialogUAWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertNotEqual(response.json['data']['status'], 'cancelled')
+        self.assertNotIn('transfer_token', response.json['data'])
 
         response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender['id'], owner_token), {'data': {'procuringEntity': {'kind': 'defense'}}})
         self.assertEqual(response.status, '200 OK')
