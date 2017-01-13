@@ -630,10 +630,14 @@ class CompetitiveDialogueDataBridge(object):
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_TENDER_PROCESS},
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
+        except ResourceError as re:
+            logger.info("Forward died, it need to be restarted.")
+            raise re
         except Exception, e:
             # TODO reset queues and restart sync
             logger.warn('Forward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.exception(e)
+            raise e
         else:
             logger.warn('Forward data sync finished!')  # Should never happen!!!
 
@@ -646,10 +650,14 @@ class CompetitiveDialogueDataBridge(object):
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_TENDER_PROCESS},
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
+        except ResourceError as re:
+            logger.info("Backward died, it need to be restarted.")
+            raise re
         except Exception, e:
             # TODO reset queues and restart sync
             logger.warn('Backward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.exception(e)
+            raise e
         else:
             logger.info('Backward data sync finished.')
 
