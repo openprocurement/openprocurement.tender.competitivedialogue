@@ -631,7 +631,7 @@ class CompetitiveDialogueDataBridge(object):
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
         except ResourceError as re:
-            logger.warn("Forward died, it need to be restarted.")
+            logger.warn('Forward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.error("Error response {}".format(re.message))
             raise re
         except Exception, e:
@@ -652,7 +652,7 @@ class CompetitiveDialogueDataBridge(object):
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
         except ResourceError as re:
-            logger.warn("Backward died, it need to be restarted.")
+            logger.warn('Backward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
             logger.error("Error response {}".format(re.message))
             raise re
         except Exception, e:
