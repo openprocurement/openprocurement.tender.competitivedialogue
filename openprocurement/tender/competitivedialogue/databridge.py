@@ -631,7 +631,8 @@ class CompetitiveDialogueDataBridge(object):
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
         except ResourceError as re:
-            logger.info("Forward died, it need to be restarted.")
+            logger.warn("Forward died, it need to be restarted.")
+            logger.error("Error response {}".format(re.message))
             raise re
         except Exception, e:
             # TODO reset queues and restart sync
@@ -651,7 +652,8 @@ class CompetitiveDialogueDataBridge(object):
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
         except ResourceError as re:
-            logger.info("Backward died, it need to be restarted.")
+            logger.warn("Backward died, it need to be restarted.")
+            logger.error("Error response {}".format(re.message))
             raise re
         except Exception, e:
             # TODO reset queues and restart sync
@@ -691,7 +693,6 @@ class CompetitiveDialogueDataBridge(object):
             gevent.spawn(self.get_competitive_dialogue_backward),
             gevent.spawn(self.get_competitive_dialogue_forward),
         ]
-        gevent.joinall(self.jobs)
 
     def _restart_synchronization_workers(self):
         logger.warn("Restarting synchronization", extra=journal_context({"MESSAGE_ID": DATABRIDGE_RESTART}, {}))
