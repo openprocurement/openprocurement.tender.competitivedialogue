@@ -47,15 +47,13 @@ class TenderStage2EUCredentialsResource(APIResource):
             self.request.errors.status = 403
             return
 
-        set_ownership(tender)
+        acc = set_ownership(tender)
         if save_tender(self.request):
             self.LOGGER.info('Generate Tender stage2 credentials {}'.format(tender.id),
                              extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_patch'}))
             return {
                 'data': tender.serialize("view"),
-                'access': {
-                    'token': tender.owner_token
-                }
+                'access': acc
             }
 
 

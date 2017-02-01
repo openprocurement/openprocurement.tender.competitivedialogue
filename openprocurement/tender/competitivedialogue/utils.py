@@ -19,6 +19,8 @@ from openprocurement.api.utils import (
     generate_id,
 )
 
+from schematics.types.base import StringType
+from hashlib import sha512
 from barbecue import vnmax
 
 LOGGER = getLogger(__name__)
@@ -209,7 +211,12 @@ def check_status(request):
 
 def set_ownership(item):
     item.owner_token = generate_id()
-
+    acc = {'token': item.owner_token}
+    if isinstance(getattr(type(item), 'transfer_token', None), StringType):
+        transfer = generate_id()
+        item.transfer_token = sha512(transfer).hexdigest()
+        acc['transfer'] = transfer
+    return acc
 
 def prepare_shortlistedFirms(shortlistedFirms):
     """ Make list with keys
