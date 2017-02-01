@@ -3939,6 +3939,7 @@ class TenderStage2UAAwardComplaintResourceTest(BaseCompetitiveDialogUAStage2Cont
             {'data': {'title': 'complaint title', 'description': 'complaint description', 'author': author}})
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
+        self.assertNotIn('transfer_token', response.json['data'])
         complaint = response.json['data']
         owner_token = response.json['access']['token']
         self.assertIn('transfer', response.json['access'])
