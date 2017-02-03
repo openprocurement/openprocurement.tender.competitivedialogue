@@ -353,7 +353,7 @@ First lets look on tender and find field ``stage2TenderID``
    :code:
 
 
-Form making changes in second stage we need token
+For making changes in second stage we need access ``token``.  Response contains `access` section where `token` will be a new ``access`` token
 
 .. include:: tutorial/tender_stage2_get_token.http
     :code:
