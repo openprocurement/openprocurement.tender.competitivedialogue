@@ -10,7 +10,8 @@ Response: 200 OK
 Content-Type: application/json; charset=UTF-8
 {
   "access": {
-    "token": "e4abd951b15e4bc48eba80f26ae7de3e"
+    "transfer": "e4a4ad6e62fc44ceb0b28ccb973ea6ee", 
+    "token": "46d1e4c1677f4bf9a8116396ce54405a"
   }, 
   "data": {
     "procurementMethod": "selective", 
