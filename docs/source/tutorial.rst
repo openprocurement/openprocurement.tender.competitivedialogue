@@ -358,10 +358,13 @@ First lets look on tender and find field ``stage2TenderID``
    :code:
 
 
-Form making changes in second stage we need token
+In order to make changes to second stage tender we need access token.
+Send PATCH request to `/tenders/<tender id>/credentials?acc_token=<first stage tender token>` endpoint.
 
 .. include:: tutorial/tender_stage2_get_token.http
     :code:
+
+Note that response also contains new ``transfer`` token.
 
 Make changes second stage
 -------------------------
