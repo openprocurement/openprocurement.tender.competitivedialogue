@@ -567,7 +567,7 @@ class CompetitiveDialogueDataBridge(object):
                 self.competitive_dialogues_queue.put({"id": patch_data['dialogueID']})
             gevent.sleep(0)
 
-    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
+    @retry(stop_max_attempt_number=5, wait_exponential_multiplier=10000)
     def _put_with_retry(self, new_tender):
         data = {"data": new_tender}
         logger.info("Creating tender stage2 from competitive dialogue id={0}".format(new_tender['dialogueID']),
@@ -575,6 +575,26 @@ class CompetitiveDialogueDataBridge(object):
                                           {"TENDER_ID": new_tender['dialogueID']}))
         try:
             res = self.client.create_tender(data)
+        except ResourceError as re:
+            if re.status_int == 412:  # Update Cookie, and retry
+                self.client.headers['Cookie'] = re.response.headers['Set-Cookie']
+            elif re.status_int == 422:  # WARNING and don't retry
+                logger.warn("Catch 422 status, stop create tender stage2",
+                            extra=journal_context({"MESSAGE_ID": DATABRIDGE_UNSUCCESSFUL_CREATE},
+                                                  {"TENDER_ID": new_tender['dialogueID']}))
+                logger.warn("Error response {}".format(re.message),
+                            extra=journal_context({"MESSAGE_ID": DATABRIDGE_UNSUCCESSFUL_CREATE},
+                                                  {"TENDER_ID": new_tender['dialogueID']}))
+            elif re.status_int == 404:  # WARNING and don't retry
+                logger.warn("Catch 404 status, stop create tender stage2",
+                            extra=journal_context(
+                                {"MESSAGE_ID": DATABRIDGE_UNSUCCESSFUL_CREATE},
+                                {"TENDER_ID": new_tender['dialogueID']}))
+            else:
+                logger.info("Unsuccessful put for tender stage2 of competitive dialogue id={0}".format(new_tender['dialogueID']),
+                            extra=journal_context({"MESSAGE_ID": DATABRIDGE_UNSUCCESSFUL_CREATE},
+                                                  {"TENDER_ID": new_tender['dialogueID']}))
+            raise re
         except Exception, e:
             logger.exception(e)
             raise
@@ -631,10 +651,6 @@ class CompetitiveDialogueDataBridge(object):
                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_TENDER_PROCESS},
                                                   {"TENDER_ID": tender_data['id']}))
                 self.competitive_dialogues_queue.put(tender_data)
-        except ResourceError as re:
-            logger.warn('Backward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
-            logger.error("Error response {}".format(re.message))
-            raise re
         except Exception, e:
             # TODO reset queues and restart sync
             logger.warn('Backward worker died!', extra=journal_context({"MESSAGE_ID": DATABRIDGE_WORKER_DIED}, {}))
@@ -677,21 +693,44 @@ class CompetitiveDialogueDataBridge(object):
     def _restart_synchronization_workers(self):
         logger.warn("Restarting synchronization", extra=journal_context({"MESSAGE_ID": DATABRIDGE_RESTART}, {}))
         for j in self.jobs:
-            j.kill()
+            j.kill(timeout=5)
         self._start_competitive_wokers()
 
     def run(self):
         self._start_competitive_sculptors()
         self._start_competitive_wokers()
         backward_worker, forward_worker = self.jobs
-
+        counter = 0
         try:
             while True:
                 gevent.sleep(self.jobs_watcher_delay)
+                if counter == 20:
+                    logger.info(
+                        """Current state: First stages in processing {competitive_dialogues_queue};
+                                          Prepared data for second stage {handicap_competitive_dialogues_queue};
+                                          Prepared data with owner and token {dialogs_stage2_put_queue};
+                                          Retry prepared data with owner and token {dialogs_stage2_retry_put_queue};
+                                          Data with second stage ID {dialog_stage2_id_queue};
+                                          Retry data with second stage ID {dialog_retry_stage2_id_queue};
+                                          Data with new status and first stage ID {dialogs_stage2_patch_queue}
+                                          Retry data with new status and first stage ID {dialogs_stage2_retry_patch_queue}
+                                          Data with new status for first stage {dialog_set_complete_queue}
+                                          Retry data with new status for first stage {dialog_retry_set_complete_queue}""".format(
+                            competitive_dialogues_queue=self.competitive_dialogues_queue.qsize(),
+                            handicap_competitive_dialogues_queue=self.handicap_competitive_dialogues_queue.qsize(),
+                            dialogs_stage2_put_queue=self.dialogs_stage2_put_queue.qsize(),
+                            dialogs_stage2_retry_put_queue=self.dialogs_stage2_retry_put_queue.qsize(),
+                            dialog_stage2_id_queue=self.dialog_stage2_id_queue.qsize(),
+                            dialog_retry_stage2_id_queue=self.dialog_retry_stage2_id_queue.qsize(),
+                            dialogs_stage2_patch_queue=self.dialogs_stage2_patch_queue.qsize(),
+                            dialogs_stage2_retry_patch_queue=self.dialogs_stage2_retry_patch_queue.qsize(),
+                            dialog_set_complete_queue=self.dialog_set_complete_queue.qsize(),
+                            dialog_retry_set_complete_queue=self.dialog_retry_set_complete_queue.qsize()))
+                    counter = 0
+                counter += 1
                 if forward_worker.dead or (backward_worker.dead and not backward_worker.successful()):
                     self._restart_synchronization_workers()
                     backward_worker, forward_worker = self.jobs
-            logger.info('Starting forward and backward sync workers')
         except KeyboardInterrupt:
             logger.info('Exiting...')
             gevent.killall(self.jobs, timeout=5)
