@@ -740,7 +740,19 @@ class CompetitiveDialogueDataBridge(object):
                             dialogs_stage2_patch_queue=self.dialogs_stage2_patch_queue.qsize(),
                             dialogs_stage2_retry_patch_queue=self.dialogs_stage2_retry_patch_queue.qsize(),
                             dialog_set_complete_queue=self.dialog_set_complete_queue.qsize(),
-                            dialog_retry_set_complete_queue=self.dialog_retry_set_complete_queue.qsize()))
+                            dialog_retry_set_complete_queue=self.dialog_retry_set_complete_queue.qsize()),
+                            extra={
+                                'competitive_dialogues_queue': self.competitive_dialogues_queue.qsize(),
+                                'handicap_competitive_dialogues_queue': self.handicap_competitive_dialogues_queue.qsize(),
+                                'dialogs_stage2_put_queue': self.dialogs_stage2_put_queue.qsize(),
+                                'dialogs_stage2_retry_put_queue': self.dialogs_stage2_retry_put_queue.qsize(),
+                                'dialog_stage2_id_queue': self.dialog_stage2_id_queue.qsize(),
+                                'dialog_retry_stage2_id_queue': self.dialog_retry_stage2_id_queue.qsize(),
+                                'dialogs_stage2_patch_queue': self.dialogs_stage2_patch_queue.qsize(),
+                                'dialogs_stage2_retry_patch_queue': self.dialogs_stage2_retry_patch_queue.qsize(),
+                                'dialog_set_complete_queue': self.dialog_set_complete_queue.qsize(),
+                                'dialog_retry_set_complete_queue': self.dialog_retry_set_complete_queue.qsize()
+                            })
                     counter = 0
                 counter += 1
                 if forward_worker.dead or (backward_worker.dead and not backward_worker.successful()):
