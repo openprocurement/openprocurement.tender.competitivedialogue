@@ -1484,9 +1484,6 @@ class CompetitiveDialogueEULotProcessTest(BaseCompetitiveDialogEUContentWebTest)
                                                                    'relatedLot': lot_id}]}})
             bids.append({response.json['data']['id']: response.json['access']['token']})
 
-        response = self.app.delete('/tenders/{}/bids/{}?acc_token={}'.format(tender_id, bids[2].keys()[0],
-                                                                             bids[2].values()[0]))
-        self.assertEqual(response.status, '200 OK')
         # switch to active.pre-qualification
         self.time_shift('active.pre-qualification')
         self.check_chronograph()
