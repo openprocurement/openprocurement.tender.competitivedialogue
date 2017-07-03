@@ -1,4 +1,4 @@
-git from gevent import monkey
+from gevent import monkey
 
 monkey.patch_all()
 
@@ -151,16 +151,14 @@ class CompetitiveDialogueDataBridge(object):
             api_version=self.config_get('tenders_api_version'),
         )
 
-        logger.info("Set initial host api and token: {0} {1} {2}".format(self.config_get('public_tenders_api_server') or self.config_get('tenders_api_server'), self.config_get('tenders_api_version'), self.config_get('api_token')))
-
         self.client = TendersClientSync(
             self.config_get('api_token'),
             host_url=self.config_get('tenders_api_server'),
             api_version=self.config_get('tenders_api_version'),
         )
 
-        def_queue_size = 7 #500
-        def_watcher_delay = 3 #15
+        def_queue_size = 500
+        def_watcher_delay = 15
         self.initial_sync_point = {}
         self.initialization_event = gevent.event.Event()
         self.competitive_dialogues_queue = Queue(maxsize=def_queue_size)  # Id tender which need to check
@@ -267,8 +265,8 @@ class CompetitiveDialogueDataBridge(object):
                 # What if another thread put one more item after get but before put?
                 self.competitive_dialogues_queue.put(tender_to_sync)
 
-                logger.info('Tender {} put back to tenders queue. Que size: {}; state: {}'.format(
-                    tender_to_sync['id'], self.competitive_dialogues_queue.qsize(), self.competitive_dialogues_queue))
+                logger.info('Tender {} put back to tenders queue. Que size: {}'.format(
+                    tender_to_sync['id'], self.competitive_dialogues_queue.qsize()))
             else:
                 if 'stage2TenderID' in tender:
                     try:
@@ -280,7 +278,7 @@ class CompetitiveDialogueDataBridge(object):
                     else:
                         if tender_stage2.get('status') in self.allowed_statuses:
                             if tender.get('status') == 'complete':
-                                logger.warn('Dialog {0} already has complete status in - silently removing from initial queue.'.format(tender['id']),
+                                logger.warn('Dialog {0} already has complete status - silently removing from initial queue.'.format(tender['id']),
                                             extra=journal_context({"MESSAGE_ID": DATABRIDGE_ONLY_PATCH},
                                                                   {"TENDER_ID": tender['id']}))
                                 self.competitive_dialogues_queue.get()  # Remove from the queue
