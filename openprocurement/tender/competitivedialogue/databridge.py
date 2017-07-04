@@ -288,6 +288,7 @@ class CompetitiveDialogueDataBridge(object):
                                                                   {"TENDER_ID": tender['id']}))
                                 patch_data = {"id": tender['id'],
                                               "status": "complete"}
+                                self.competitive_dialogues_queue.get()  # Remove from the queue
                                 self.dialog_set_complete_queue.put(patch_data)
 
                             continue
