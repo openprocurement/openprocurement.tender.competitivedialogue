@@ -1210,6 +1210,11 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest):
         self.assertEqual(response.json['data']['mode'], u'test')
 
     def test_multiple_bidders_tender(self):
+        # SD debug
+        #for i in range(20):
+        #test_tender_data = test_tender_data_eu.copy()
+        #test_tender_data['title'] =u"футляри до державних нагород"
+
         # create tender
         self.app.authorization = ('Basic', ('broker', ''))
         response = self.app.post_json('/tenders',

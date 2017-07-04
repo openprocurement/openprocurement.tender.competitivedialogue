@@ -120,6 +120,7 @@ class BaseCompetitiveDialogWebTest(BaseTenderWebTest):
     def tearDown(self):
         if self.docservice:
             self.setUpDS()
+        # SD debug
         self.couchdb_server.delete(self.db_name)
         self.couchdb_server.create(self.db_name)
         db = self.couchdb_server[self.db_name]
