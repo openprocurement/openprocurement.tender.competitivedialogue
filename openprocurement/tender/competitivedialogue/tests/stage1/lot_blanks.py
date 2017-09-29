@@ -450,7 +450,7 @@ def one_lot_3bid_1del(self):
     response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender_id, owner_token),
                                    {"data": {"items": [{'relatedLot': lot_id}]}})
     self.assertEqual(response.status, '200 OK')
-    # create bid
+    # create bids
     self.app.authorization = ('Basic', ('broker', ''))
     bids = []
     bidder_data = deepcopy(self.test_bids_data[0]['tenderers'][0])
@@ -467,33 +467,16 @@ def one_lot_3bid_1del(self):
     response = self.app.delete('/tenders/{}/bids/{}?acc_token={}'.format(tender_id, bids[2].keys()[0],
                                                                          bids[2].values()[0]))
     self.assertEqual(response.status, '200 OK')
+
     # switch to active.pre-qualification
     self.time_shift('active.pre-qualification')
     self.check_chronograph()
 
-    response = self.app.get('/tenders/{}/qualifications?acc_token={}'.format(self.tender_id, owner_token))
-    self.assertEqual(response.content_type, 'application/json')
-    qualifications = response.json['data']
-
-    for qualification in qualifications:
-        response = self.app.patch_json('/tenders/{}/qualifications/{}?acc_token={}'.format(self.tender_id,
-                                                                                           qualification['id'],
-                                                                                           owner_token),
-                                  {"data": {'status': 'active', "qualified": True, "eligible": True}})
-        self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']['status'], 'active')
-    response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender_id, owner_token),
-                                   {"data": {"status": "active.pre-qualification.stand-still"}})
-    self.assertEqual(response.status, "200 OK")
-    self.check_chronograph()
-
+    # we have deleted one bid, this means tender is not valid, status of tender should be unsuccessful
     response = self.app.get('/tenders/{}?acc_token={}'.format(self.tender_id, owner_token))
-    self.assertEqual(response.content_type, 'application/json')
-    self.assertEqual(response.status, "200 OK")
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.json['data']['status'], 'unsuccessful')
 
-    response = self.app.get('/tenders/{}/qualifications?acc_token={}'.format(self.tender_id, owner_token))
-    self.assertEqual(response.content_type, 'application/json')
-    self.assertEqual(response.status, "200 OK")
 
 
 def one_lot_3bid_1un(self):

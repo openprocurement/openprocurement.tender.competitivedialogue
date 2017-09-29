@@ -39,7 +39,7 @@ from openprocurement.tender.competitivedialogue.tests.stage1.bid_blanks import (
     create_tender_bidder_invalid_confidential_document,
 )
 
-test_bids.append(test_bids[0].copy())  # Minimal number of bits is 3
+test_bids = [test_bids[0].copy(), test_bids[1].copy(), test_bids[0].copy()]  # Minimal number of bids is 3
 
 
 class CompetitiveDialogEUBidResourceTest(BaseCompetitiveDialogEUContentWebTest, TenderBidResourceTestMixin):
