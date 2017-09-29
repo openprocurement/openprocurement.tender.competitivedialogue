@@ -27,7 +27,7 @@ from openprocurement.tender.openua.tests.base import (
     test_tender_data as base_test_tender_data_ua
 )
 
-
+test_bids = [test_bids[0].copy(), test_bids[1].copy(), test_bids[0].copy()]  # Minimal number of bids is 3
 now = datetime.now()
 test_tender_data_eu = deepcopy(base_test_tender_data_eu)
 test_tender_data_eu["procurementMethodType"] = CD_EU_TYPE

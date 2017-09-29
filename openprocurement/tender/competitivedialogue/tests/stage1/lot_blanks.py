@@ -450,7 +450,7 @@ def one_lot_3bid_1del(self):
     response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender_id, owner_token),
                                    {"data": {"items": [{'relatedLot': lot_id}]}})
     self.assertEqual(response.status, '200 OK')
-    # create bid
+    # create bids
     self.app.authorization = ('Basic', ('broker', ''))
     bids = []
     bidder_data = deepcopy(self.test_bids_data[0]['tenderers'][0])
@@ -483,14 +483,13 @@ def one_lot_3bid_1del(self):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.json['data']['status'], 'active')
     response = self.app.patch_json('/tenders/{}?acc_token={}'.format(tender_id, owner_token),
-                                   {"data": {"status": "active.pre-qualification.stand-still"}})
-    self.assertEqual(response.status, "200 OK")
-    self.check_chronograph()
+                                   {"data": {"status": "active.pre-qualification.stand-still"}}, status=403)
+    self.assertEqual(response.status, '403 Forbidden')
 
+    # we have deleted one bid, this means tender is not valid, status of tender should be unsuccessful
     response = self.app.get('/tenders/{}?acc_token={}'.format(self.tender_id, owner_token))
-    self.assertEqual(response.content_type, 'application/json')
-    self.assertEqual(response.status, "200 OK")
-
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.json['data']['status'], 'unsuccessful')
     response = self.app.get('/tenders/{}/qualifications?acc_token={}'.format(self.tender_id, owner_token))
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.status, "200 OK")
