@@ -12,7 +12,7 @@ from openprocurement.tender.belowthreshold.tests.tender_blanks import (
 from openprocurement.tender.openua.tests.tender_blanks import (
     # CompetitiveDialogResourceTest
     empty_listing,
-    patch_tenderPeriod
+    patch_tender_period
 )
 
 from openprocurement.tender.competitivedialogue.tests.base import (
@@ -59,7 +59,7 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest, TenderReso
 
     initial_auth = ('Basic', ('broker', ''))
     initial_data = test_tender_data_eu  # TODO: change attribute identifier
-    tender_period_days = 30
+    tender_period_days = {'first': 30, 'second': 7}
 
     test_empty_listing = snitch(empty_listing)
     test_create_tender_invalid = snitch(create_tender_invalid_eu)
@@ -71,7 +71,7 @@ class CompetitiveDialogEUResourceTest(BaseCompetitiveDialogEUWebTest, TenderReso
     test_guarantee = snitch(guarantee)
     test_multiple_bidders_tender = snitch(multiple_bidders_tender_eu)
     test_try_go_to_ready_stage = snitch(try_go_to_ready_stage_eu)
-    test_patch_tenderPeriod = snitch(patch_tenderPeriod)
+    test_patch_tender_period = snitch(patch_tender_period)
 
 
 class CompetitiveDialogUAResourceTest(BaseCompetitiveDialogUAWebTest, TenderResourceTestMixin):
