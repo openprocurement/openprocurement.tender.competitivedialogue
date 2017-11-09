@@ -167,10 +167,7 @@ def patch_tender_with_lots_auction(self):
     self.assertEqual(response.status, '201 Created')
     cancelled_lot_id = self.lots[0]['id']
 
-    for bid in patch_data['bids']:
-        ## delete lotValues for cancelled lot in patch data
-        bid['lotValues'] = [bid['lotValues'][1]]
-
+    del patch_data['bids']
     self.app.authorization = ('Basic', ('auction', ''))
     response = self.app.patch_json('/tenders/{}/auction/{}'.format(self.tender_id, self.lots[0]['id']),
                                    {'data': patch_data}, status=403)

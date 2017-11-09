@@ -23,6 +23,13 @@ from openprocurement.tender.belowthreshold.tests.auction_blanks import (
     post_tender_auction_reversed,
     # TenderStage2EU(UA)FeaturesAuctionResourceTest
     get_tender_auction_feature,
+    post_tender_auction_feature,
+    # TenderFeaturesLotAuctionResourceTest
+    get_tender_lot_auction_features,
+    post_tender_lot_auction_features,
+    # TenderFeaturesMultilotAuctionResourceTest
+    get_tender_lots_auction_features,
+    post_tender_lots_auction_features
 )
 from openprocurement.tender.competitivedialogue.tests.stage2.auction_blanks import (
     # # TenderStage2EU(UA)MultipleLotAuctionResourceTest
@@ -132,8 +139,7 @@ class TenderStage2EUMultipleLotAuctionResourceTest(TenderMultipleLotAuctionResou
     test_patch_tender_auction = snitch(patch_tender_with_lots_auction)
 
 
-class TenderStage2EUFeaturesAuctionResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest):
-    initial_data = test_features_tender_eu_data
+class TenderStage2EUFeaturesAuctionResourceTest(TenderStage2EUAuctionResourceTest):
     features = [
             {
                 "code": "OCDS-123454-AIR-INTAKE",
@@ -171,6 +177,7 @@ class TenderStage2EUFeaturesAuctionResourceTest(BaseCompetitiveDialogEUStage2Con
                 ]
             }
         ]
+    initial_features = features
     tenderer_info = deepcopy(author)
     initial_bids = [
         {
@@ -212,54 +219,25 @@ class TenderStage2EUFeaturesAuctionResourceTest(BaseCompetitiveDialogEUStage2Con
             'selfEligible': True
         }
     ]
-    initial_status = 'active.auction'
-
-    def setUp(self):
-        self.app.authorization = ('Basic', ('broker', ''))
-        data = test_tender_stage2_data_eu.copy()
-        item = data['items'][0].copy()
-        item['id'] = "1"
-        data['items'] = [item]
-        data['features'] = [
-            {
-                "code": "OCDS-123454-AIR-INTAKE",
-                "featureOf": "item",
-                "relatedItem": "1",
-                "title": u"Потужність всмоктування",
-                "title_en": u"Air Intake",
-                "description": u"Ефективна потужність всмоктування пилососа, в ватах (аероватах)",
-                "enum": [
-                    {
-                        "value": 0.05,
-                        "title": u"До 1000 Вт"
-                    },
-                    {
-                        "value": 0.1,
-                        "title": u"Більше 1000 Вт"
-                    }
-                ]
-            },
-            {
-                "code": "OCDS-123454-POSTPONEMENT",
-                "featureOf": "tenderer",
-                "title": u"Відстрочка платежу",
-                "title_en": u"Postponement of payment",
-                "description": u"Термін відстрочки платежу",
-                "enum": [
-                    {
-                        "value": 0.05,
-                        "title": u"До 90 днів"
-                    },
-                    {
-                        "value": 0.1,
-                        "title": u"Більше 90 днів"
-                    }
-                ]
-            }
-        ]
-        self.create_tender(initial_data=data, initial_bids=self.initial_bids)
 
     test_get_tender_auction = snitch(get_tender_auction_feature)
+    test_post_tender_auction = snitch(post_tender_auction_feature)
+
+
+class TenderStage2EUFeaturesLotAuctionResourceTest(TenderLotAuctionResourceTestMixin,
+                                                        TenderStage2EUFeaturesAuctionResourceTest):
+
+    initial_lots = test_lots
+    test_get_tender_auction = snitch(get_tender_lot_auction_features)
+    test_post_tender_auction = snitch(post_tender_lot_auction_features)
+
+
+class TenderStage2EUFeaturesMultilotAuctionResourceTest(TenderMultipleLotAuctionResourceTestMixin,
+                                                TenderStage2EUFeaturesAuctionResourceTest):
+    initial_lots = test_lots * 2
+    test_get_tender_auction = snitch(get_tender_lots_auction_features)
+    test_post_tender_auction = snitch(post_tender_lots_auction_features)
+    test_patch_tender_auction = snitch(patch_tender_with_lots_auction)
 
 
 class TenderStage2UAAuctionResourceTest(BaseCompetitiveDialogUAStage2ContentWebTest, TenderAuctionResourceTestMixin):
@@ -378,7 +356,7 @@ class TenderStage2UAFeaturesAuctionResourceTest(BaseCompetitiveDialogUAStage2Con
             'selfEligible': True
         }
     ]
-    initial_status = 'active.auction'
+    initial_status = 'active.tendering'
 
     def setUp(self):
         self.app.authorization = ('Basic', ('broker', ''))
@@ -426,6 +404,20 @@ class TenderStage2UAFeaturesAuctionResourceTest(BaseCompetitiveDialogUAStage2Con
         self.create_tender(initial_data=data, initial_bids=self.initial_bids)
 
     test_get_tender_auction = snitch(get_tender_auction_feature)
+    test_post_tender_auction = snitch(post_tender_auction_feature)
+
+class TenderStage2UAFeaturesLotAuctionResourceTest(TenderLotAuctionResourceTestMixin, TenderStage2UAFeaturesAuctionResourceTest):
+    initial_lots = test_lots
+    test_get_tender_auction = snitch(get_tender_lot_auction_features)
+    test_post_tender_auction = snitch(post_tender_lot_auction_features)
+
+
+class TenderStage2UAFeaturesMultilotAuctionResourceTest(TenderMultipleLotAuctionResourceTestMixin,
+                                                TenderStage2UAFeaturesAuctionResourceTest):
+    initial_lots = test_lots * 2
+    test_get_tender_auction = snitch(get_tender_lots_auction_features)
+    test_post_tender_auction = snitch(post_tender_lots_auction_features)
+    test_patch_tender_auction = snitch(patch_tender_with_lots_auction)
 
 
 def suite():
@@ -433,9 +425,13 @@ def suite():
     suite.addTest(unittest.makeSuite(TenderStage2EUAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderStage2EUSameValueAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderStage2EUFeaturesAuctionResourceTest))
+    suite.addTest(unittest.makeSuite(TenderStage2EUFeaturesLotAuctionResourceTest))
+    suite.addTest(unittest.makeSuite(TenderStage2EUFeaturesMultilotAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderStage2UAAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderStage2UASameValueAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderStage2UAFeaturesAuctionResourceTest))
+    suite.addTest(unittest.makeSuite(TenderStage2UAFeaturesLotAuctionResourceTest))
+    suite.addTest(unittest.makeSuite(TenderStage2UAFeaturesMultilotAuctionResourceTest))
     return suite
 
 
