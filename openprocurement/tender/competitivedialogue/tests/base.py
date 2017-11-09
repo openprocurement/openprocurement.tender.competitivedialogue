@@ -750,7 +750,8 @@ class BaseCompetitiveDialogEUStage2ContentWebTest(BaseCompetitiveDialogEUWebTest
     def setUp(self):
         self.app.authorization = ('Basic', ('broker', ''))
         super(BaseCompetitiveDialogEUStage2ContentWebTest, self).setUp()
-        self.create_tender()
+        self.initial_data['items'][0]['id'] = 1
+        self.create_tender(features=self.initial_features)
 
     create_tender = create_tender_stage2
 
