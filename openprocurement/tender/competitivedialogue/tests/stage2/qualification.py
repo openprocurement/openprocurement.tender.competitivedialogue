@@ -199,6 +199,7 @@ class TenderStage2EU2LotQualificationComplaintResourceTest(TenderStage2EULotQual
     test_create_tender_qualification_complaint = snitch(create_tender_2lot_qualification_complaint)
     test_patch_tender_qualification_complaint = snitch(patch_tender_2lot_qualification_complaint)
 
+
 class TenderStage2EUQualificationComplaintDocumentResourceTest(BaseCompetitiveDialogEUStage2ContentWebTest):
     initial_status = 'active.tendering'  # 'active.pre-qualification.stand-still' status sets in setUp
     initial_bids = test_tender_bids
