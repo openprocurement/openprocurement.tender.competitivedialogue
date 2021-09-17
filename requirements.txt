@@ -51,3 +51,4 @@ git+https://github.com/openprocurement/rfc6266.git
 -e git+https://github.com/openprocurement/openprocurement.tender.belowthreshold.git@master#egg=openprocurement.tender.belowthreshold
 -e git+https://github.com/openprocurement/openprocurement.tender.openua.git@master#egg=openprocurement.tender.openua
 -e git+https://github.com/openprocurement/openprocurement.tender.openeu.git@master#egg=openprocurement.tender.openeu
+urllib3>=1.25.9 # not directly required, pinned by Snyk to avoid a vulnerability
